@@ -92,11 +92,11 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
           disabled={answered || timer === 0}
           autoFocus
         />
-        <button type="submit" disabled={answered || timer === 0}>Submit</button>
+        <input type="submit" value = "Enter" disabled={answered || timer === 0}></input>
       </form>
       <div style={{ minHeight: 30, margin: "1em 0" }}>{feedback}</div>
       {(answered || timer === 0) && (
-        <button onClick={handleNext}>Next</button>
+        <button onClick={handleNext}>Next &ensp;</button>
       )}
       <button onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Quiz</button>
     </div>

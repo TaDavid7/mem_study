@@ -5,6 +5,7 @@ export interface FlashcardType {
   _id: string;
   question: string;
   answer: string;
+  folder: string;
 }
 
 // Define the props type for QuizGame

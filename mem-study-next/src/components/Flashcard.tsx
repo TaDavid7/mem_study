@@ -5,6 +5,7 @@ type Card = {
   _id: string;            
   question: string;
   answer: string;
+  folder: string;
 };
 
 // 2. Define props type for the component

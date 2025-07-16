@@ -1,9 +1,10 @@
-const mongoose = require('mongoose');   //loads mongoose library
+const mongoose = require('mongoose');   // loads mongoose library
 
+// Flashcard schema
 const flashcardSchema = new mongoose.Schema({
-    question: {type: String, required: true},
-    answer: {type: String, required: true}
+    question: { type: String, required: true },
+    answer: { type: String, required: true },
+    folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder', required: true }
 });
+module.exports = mongoose.model('Flashcard', flashcardSchema);
 
-const Flashcard = mongoose.model('Flashcard', flashcardSchema);
-module.exports = Flashcard;

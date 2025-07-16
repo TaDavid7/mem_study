@@ -21,6 +21,16 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
   const [timer, setTimer] = useState<number>(0);
   const [answered, setAnswered] = useState<boolean>(false);
 
+  if (!flashcards.length)
+    return (
+      <div>
+        No flashcards available.
+        <br></br>
+        <button 
+        className = "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+        onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Quiz</button>
+    </div>);
+
   useEffect(() => {
     if (answered) return; // Don't count down if user has already answered
 
@@ -45,8 +55,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
     setFeedback("");
   }, [current, flashcards]);
 
-  if (!flashcards.length)
-    return <div>No flashcards available.</div>;
+  
 
   if (current >= flashcards.length)
     return (
@@ -98,7 +107,9 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
       {(answered || timer === 0) && (
         <button onClick={handleNext}>Next &ensp;</button>
       )}
-      <button onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Quiz</button>
+      <button 
+        className = "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+        onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Quiz</button>
     </div>
   );
 };

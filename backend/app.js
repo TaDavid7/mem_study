@@ -40,6 +40,23 @@ app.post('/api/flashcards', async (req, res) =>{
     }
 });
 
+//Edit a flashcard
+app.patch('/api/flashcards/:id', async(req, res) => {
+    try{
+        const updatedFlashcard = await Flashcard.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            {new: true, runValidators: true}
+        );
+        if(!updatedFlashcard){
+            return res.status(404).json({message: 'Flashcard not found'});
+        }
+        res.json(updatedFlashcard);
+    } catch(err){
+        res.status(500).json({message: err.message});
+    }
+});
+
 //delete a flashcard
 app.delete('/api/flashcards/:id', async (req, res) =>{
     try{

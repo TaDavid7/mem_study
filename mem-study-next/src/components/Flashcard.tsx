@@ -11,9 +11,10 @@ type Card = {
 type FlashcardProps = {
   card: Card;
   onDelete: (id: string) => void;   // match the _id type
+  onEdit: (id: string, question: string, answer: string ) => void;
 };
 
-const Flashcard: React.FC<FlashcardProps> = ({ card, onDelete }) => {
+const Flashcard: React.FC<FlashcardProps> = ({ card, onDelete, onEdit }) => {
   const [flipped, setFlipped] = useState(false);
 
   return (
@@ -32,13 +33,20 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onDelete }) => {
         </>
       )}
     </div>
-
-    <button
-      onClick={() => onDelete(card._id)}
-      className="mt-3 bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
-    >
-      Delete
-    </button>
+      <div className="flex gap-4 justify-center mt-4">
+      <button
+        className = "mt-3 bg-blue-500 text-white px-4 py-2 hover:bg-blue-600 transition"
+        onClick={() => onEdit(card._id, card.question, card.answer)}
+      >
+        Edit
+      </button> &nbsp; &nbsp; &nbsp;
+      <button
+        className="mt-3 bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+        onClick={() => onDelete(card._id)}
+      >
+        Delete
+      </button>
+    </div>
   </div>
 );
 

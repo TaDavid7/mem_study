@@ -163,8 +163,25 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans p-4">
-      <h1 className="text-3xl font-bold mb-4">Flashcards</h1>
-      
+      <br></br>
+      <ul
+        className = "flex flex-wrap text-lg font-medium text-center text-gray-500 border-b border-gray-200 dark:border-gray-700 drak:text-gray-400">
+        <li className = "me-2" >
+          <Link
+            href="/home"
+            aria-current = "page"
+            className= "inline-block p-4 text-gray-400 bg-gray-100 rounded-t-lg bg-transparent hover:bg-gray-800 ">Flashcards
+          </Link>
+        </li>
+        <li className = "me-2" >
+          <Link
+            href="/quiz"
+            className= "inline-block p-4 text-gray-400 bg-gray-100 rounded-t-lg bg-transparent hover:bg-gray-800 ">Quiz
+          </Link>
+        </li>
+
+      </ul>
+      <br></br>
       {/* Add folder form */}
       <form onSubmit={handleAddFolder} className="mb-4 flex gap-2">
         <input
@@ -251,16 +268,6 @@ const App: React.FC = () => {
           >Cancel</button>
         </form>
       )}
-
-      {/* Quiz link */}
-      <div className="mb-4">
-        <Link
-          href={selectedFolder ? `/quiz?folder=${selectedFolder}` : "#"}
-          className={`px-4 py-2 rounded bg-blue-500 ${!selectedFolder ? "opacity-50 pointer-events-none" : "hover:bg-blue-600"}`}
-        >
-          Quiz
-        </Link>
-      </div>
 
       {/* Add or Edit card form */}
       {editingId ? (

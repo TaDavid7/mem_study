@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import type {ReactNode} from "react";
+import TabNavigation from '@/components/TabNavigation';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -25,9 +27,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="p-4"
       >
-        {children}
+        <TabNavigation />
+        <main className = "mt-6">{children}</main>
       </body>
     </html>
   );

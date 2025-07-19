@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
+import {usePathname} from 'next/navigation';
 import Flashcard from "@/components/Flashcard";
 import Link from "next/link";
 
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [folderDropdownOpen, setFolderDropdownOpen] = useState<string | null>(null);
+
 
 
   //loads folders
@@ -162,26 +164,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white font-sans p-4">
-      <br></br>
-      <ul
-        className = "flex flex-wrap text-lg font-medium text-center text-gray-500 border-b border-gray-200 dark:border-gray-700 drak:text-gray-400">
-        <li className = "me-2" >
-          <Link
-            href="/home"
-            aria-current = "page"
-            className= "inline-block p-4 text-gray-400 bg-gray-100 rounded-t-lg bg-transparent hover:bg-gray-800 ">Flashcards
-          </Link>
-        </li>
-        <li className = "me-2" >
-          <Link
-            href="/quiz"
-            className= "inline-block p-4 text-gray-400 bg-gray-100 rounded-t-lg bg-transparent hover:bg-gray-800 ">Quiz
-          </Link>
-        </li>
-
-      </ul>
-      <br></br>
+    <div className="min-h-screen text-b bg-white font-sans p-4">
       {/* Add folder form */}
       <form onSubmit={handleAddFolder} className="mb-4 flex gap-2">
         <input
@@ -189,9 +172,9 @@ const App: React.FC = () => {
           onChange={e => setNewFolder(e.target.value)}
           placeholder="New folder name"
           required
-          className="p-2 rounded bg-gray-800 text-white placeholder-gray-400"
+          className="p-2 rounded bg-gray-200 text-black placeholder-gray-400"
         />
-        <button type="submit" className="bg-indigo-500 px-3 py-2 rounded">Add Folder</button>
+        <button type="submit" className="bg-indigo-500 text-white px-3 py-2 rounded">Add Folder</button>
       </form>
 
       {/* Folder dropdown and actions */}
@@ -200,7 +183,7 @@ const App: React.FC = () => {
         <select
           value={selectedFolder}
           onChange={e => setSelectedFolder(e.target.value)}
-          className="p-2 rounded bg-gray-800 text-white"
+          className="p-2 rounded bg-gray-200 border-transparent text-gray-600"
           style={{ minWidth: "180px" }}
         >
           <option value="">-- Select --</option>
@@ -296,16 +279,16 @@ const App: React.FC = () => {
             onChange={e => setQuestion(e.target.value)}
             placeholder="Question"
             required
-            className="p-2 rounded bg-gray-800 text-white placeholder-gray-400"
+            className="p-2 rounded bg-gray-200 text-black placeholder-gray-400"
           />
           <input
             value={answer}
             onChange={e => setAnswer(e.target.value)}
             placeholder="Answer"
             required
-            className="p-2 rounded bg-gray-800 text-white placeholder-gray-400"
+            className="p-2 rounded bg-gray-200 text-black placeholder-gray-400"
           />
-          <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition">Add Card</button>
+          <button type="submit" className="bg-green-500 text-gray-500 px-4 py-2 rounded hover:bg-green-600 transition">Add Card</button>
         </form>
       )}
 

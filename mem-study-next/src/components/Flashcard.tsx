@@ -22,7 +22,7 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onDelete, onEdit }) => {
   <div className="flex flex-col items-center w-full max-w-2xl mx-auto mb-8">
     <div
       onClick={() => setFlipped(!flipped)}
-      className="rounded-xl p-6 w-full min-h-[200px] text-center border border-gray-500 bg-gray-800 text-white cursor-pointer hover:shadow-lg transition flex flex-col justify-center items-center"
+      className="rounded-xl p-6 w-full min-h-[200px] text-center border border-gray-500 bg-transparent text-gray-700 cursor-pointer hover:shadow-lg transition flex flex-col justify-center items-center"
     >
       {flipped ? (
         <>

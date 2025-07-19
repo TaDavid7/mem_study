@@ -63,19 +63,25 @@ export default function QuizPage() {
     <div>
       {!selectedFolder ? (
         <div className="p-6">
-        <div className="mb-6 flex items-center gap-4">
+        <div className="mb-6 items-center gap-4">
           <label className="mr-2">Select Folder:</label>
-          <select
-            value={selectedFolder}
-            onChange={e => setSelectedFolder(e.target.value)}
-            className="p-2 rounded bg-gray-800 text-white"
-            style={{ minWidth: "180px" }}
-          >
-            <option value="">-- Select --</option>
-            {folders.map(folder => (
-              <option key={folder._id} value={folder._id}>{folder.name}</option>
-            ))}
-          </select>
+          <>
+            <select
+              value={selectedFolder}
+              onChange={e => setSelectedFolder(e.target.value)}
+              className="p-2 rounded bg-gray-200 text-gray-600"
+              style={{ minWidth: "180px" }}
+            >
+              <option value="">-- Select --</option>
+              {folders.map(folder => (
+                <option key={folder._id} value={folder._id}>{folder.name}</option>
+              ))}
+            </select> <br></br>
+            <button
+              className = "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition" 
+              onClick={exitingQuizGame} style={{ marginTop: "1rem" }}>Quit Quiz
+            </button>
+          </>
         </div>
       </div>
       ): 

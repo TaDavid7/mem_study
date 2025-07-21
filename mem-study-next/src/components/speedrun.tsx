@@ -21,7 +21,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
     const [score, setScore] = useState<number>(0);
     const [timer, setTimer] = useState<number>(0);
     const [answered, setAnswered] = useState<boolean>(false);
-    const isFirstRender = useRef(true);
+    const [showResults, setShowResults] = useState(false);
 
     if (!flashcards.length)
         return (
@@ -49,7 +49,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
 
     // Reset timer and answered state on new question
     useEffect(() => {
-        setTimer(80);
+        setTimer(10);
     },[]);
     
     useEffect(() => {
@@ -58,14 +58,17 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
         setFeedback("");
     }, [current, flashcards]);
 
-  if (current >= flashcards.length)
-    return (
-      <div>
-        <h2>Speedrun Complete!</h2>
-        <h2>Score is: {score}/{flashcards.length}</h2>
-        <button onClick={onQuit}>Back to Cards</button>
-      </div>
-    );
+    if (current >= flashcards.length)
+        setShowResults(true);
+
+    const results = () => (
+        <div>
+            <h2>Speedrun Complete!</h2>
+            <h2>Score is: {score}/{flashcards.length}</h2>
+            <button onClick={onQuit}>Back to Cards</button>
+        </div>
+        
+);
 
   // Handle answer submission
   const checkAnswer = async (e: FormEvent) => {
@@ -107,8 +110,12 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
       <div style={{ minHeight: 30, margin: "1em 0" }}>{feedback}</div>
       
       <button 
+        className = "bg-blue-400 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+        onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>See Results</button>
+      <button 
         className = "bg-green-400 text-black px-4 py-2 rounded hover:bg-green-600 transition"
         onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Speedrun</button>
+      {showResults ? results() : null}
     </div>
   );
 };

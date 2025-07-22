@@ -21,6 +21,7 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
   const [score, setScore] = useState<number>(0);
   const [timer, setTimer] = useState<number>(0);
   const [answered, setAnswered] = useState<boolean>(false);
+  const [showResults, setShowResults] = useState(false);
 
   if (!flashcards.length)
     return (
@@ -57,15 +58,15 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
   }, [current, flashcards]);
 
   
-
-  if (current >= flashcards.length)
-    return (
+  const results = () => {
+      return(
       <div>
-        <h2>Quiz Complete!</h2>
-        <h2>Score is: {score}/{flashcards.length}</h2>
-        <button onClick={onQuit}>Back to Cards</button>
+          <h2>Speedrun Complete!</h2>
+          <h2>Score is: {score}/{flashcards.length}</h2>
+          <button onClick={onQuit}>Back to Cards</button>
       </div>
-    );
+      )
+    };
 
   // Handle answer submission
   const checkAnswer = (e: FormEvent) => {
@@ -82,6 +83,9 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
       setFeedback(`Incorrect. The answer was: ${flashcards[current].answer}`);
     }
     setAnswered(true);
+    if(current >= (flashcards.length-1)){
+      setShowResults(true);
+    }
   };
 
   // Move to next question
@@ -91,6 +95,8 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
 
   return (
     <div style={{ margin: "2rem 0", padding: "2rem", border: "1px solid #aaa", borderRadius: 8 }}>
+      {!showResults ? (
+        <div>
       <h2>Quiz Mode</h2>
       <div><strong>Time Left:</strong> {timer} seconds</div>
       <p><strong>Question:</strong> {flashcards[current].question}</p>
@@ -105,9 +111,16 @@ const QuizGame: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
         <input type="submit" value = "Enter" disabled={answered || timer === 0}></input>
       </form>
       <div style={{ minHeight: 30, margin: "1em 0" }}>{feedback}</div>
+      {showResults ? results() : null}
       {(answered || timer === 0) && (
         <button onClick={handleNext}>Next &ensp;</button>
       )}
+      </div>
+    ) : (null)}
+    {showResults ? results() : null}
+      <button 
+        className = "bg-blue-400 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+        onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>See Results</button> &nbsp; &nbsp;
       <button 
         className = "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
         onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Quiz</button>

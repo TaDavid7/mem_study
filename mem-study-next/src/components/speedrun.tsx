@@ -23,6 +23,16 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
     const [answered, setAnswered] = useState<boolean>(false);
     const [showResults, setShowResults] = useState(false);
 
+    const results = () => {
+      return(
+      <div>
+          <h2>Speedrun Complete!</h2>
+          <h2>Score is: {score}/{flashcards.length}</h2>
+          <button onClick={onQuit}>Back to Cards</button>
+      </div>
+      )
+    };
+    
     if (!flashcards.length)
         return (
         <div>
@@ -58,17 +68,6 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
         setFeedback("");
     }, [current, flashcards]);
 
-    if (current >= flashcards.length)
-        setShowResults(true);
-
-    const results = () => (
-        <div>
-            <h2>Speedrun Complete!</h2>
-            <h2>Score is: {score}/{flashcards.length}</h2>
-            <button onClick={onQuit}>Back to Cards</button>
-        </div>
-        
-);
 
   // Handle answer submission
   const checkAnswer = async (e: FormEvent) => {
@@ -85,8 +84,13 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
       setFeedback(`Incorrect. The answer was: ${flashcards[current].answer}`);
     }
     setAnswered(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    handleNext();
+    if (current >= (flashcards.length-1)){
+      setShowResults(true);
+    }
+    else{
+        await new Promise(resolve => setTimeout(resolve, 500));
+        handleNext();
+    }
   };
 
   const handleNext = () => {
@@ -95,9 +99,11 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
 
   return (
     <div style={{ margin: "2rem 0", padding: "2rem", border: "1px solid #aaa", borderRadius: 8 }}>
-      <h2>Quiz Mode</h2>
+      {!showResults ? (
+      <div>
+      <h2>Speedrun Mode</h2>
       <div><strong>Time Left:</strong> {timer} seconds</div>
-      <p><strong>Question:</strong> {flashcards[current].question}</p>
+      <p><strong>Question:</strong> {flashcards[current]?.question}</p>
       <form onSubmit={checkAnswer}>
         <input
           value={userAnswer}
@@ -108,14 +114,16 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
         <input type="submit" value = "Enter"></input>
       </form>
       <div style={{ minHeight: 30, margin: "1em 0" }}>{feedback}</div>
-      
+      </div>
+      ) : (null)}
+      {showResults ? results() : null}
       <button 
         className = "bg-blue-400 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-        onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>See Results</button>
+        onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>See Results </button> &nbsp; &nbsp;
       <button 
         className = "bg-green-400 text-black px-4 py-2 rounded hover:bg-green-600 transition"
         onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Speedrun</button>
-      {showResults ? results() : null}
+      
     </div>
   );
 };

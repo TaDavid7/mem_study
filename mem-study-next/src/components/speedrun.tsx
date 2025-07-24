@@ -59,7 +59,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
 
     // Reset timer and answered state on new question
     useEffect(() => {
-        setTimer(10);
+        setTimer(80);
     },[]);
     
     useEffect(() => {
@@ -98,32 +98,37 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
   };
 
   return (
-    <div style={{ margin: "2rem 0", padding: "2rem", border: "1px solid #aaa", borderRadius: 8 }}>
+    <div>
       {!showResults ? (
-      <div>
+      <div className = "">
       <h2>Speedrun Mode</h2>
       <div><strong>Time Left:</strong> {timer} seconds</div>
+
+      <div 
+        style = {{textAlign: "center"}}>
       <p><strong>Question:</strong> {flashcards[current]?.question}</p>
       <form onSubmit={checkAnswer}>
         <input
           value={userAnswer}
           onChange={e => setUserAnswer(e.target.value)}
           placeholder="Type your answer"
+          className = "bg-gray-100 border border-gray-300 rounded-lg focus:ring-blue-500"
           autoFocus
         />
-        <input type="submit" value = "Enter"></input>
       </form>
       <div style={{ minHeight: 30, margin: "1em 0" }}>{feedback}</div>
       </div>
+      </div>
       ) : (null)}
       {showResults ? results() : null}
+      <div style = {{textAlign: "center"}}>
       <button 
         className = "bg-blue-400 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
         onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>See Results </button> &nbsp; &nbsp;
       <button 
         className = "bg-green-400 text-black px-4 py-2 rounded hover:bg-green-600 transition"
         onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Speedrun</button>
-      
+      </div>
     </div>
   );
 };

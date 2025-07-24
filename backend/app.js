@@ -6,6 +6,9 @@ require('dotenv').config();
 const Flashcard = require('./models/Flashcard'); //import model
 const Folder = require('./models/Folder') //import Folder
 
+const http = require('http');       //adding webscoket
+const WebSocket = require('ws');
+
 const app = express();
 const PORT = 5000;
 
@@ -13,9 +16,29 @@ app.use(cors());
 app.use(express.json());
 
 //Connect to MongoDB with Mongoose
+let server;
 mongoose.connect(process.env.MONGO_URL)
     .then(() => {
-        app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+        server = http.createServer(app);    //create HTTP server with express
+        const wss = new WebSocket.Server({server}); //Attack websocket server to http server
+
+        //Handle websocket connections
+        wss.on('connection', (ws) => {
+            console.log('New WebSocket connection');
+
+            ws.on('message', (message) => {
+                wss.clients.forEach((client) => {
+                    if(client !== ws && client.readyState === WebSocket.OPEN){
+                        client.send(message);
+                    }
+                });
+            });
+
+            ws.on('close', () => {
+                console.log('WebSocket connection closed');
+            });
+        });
+        server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
     })
     .catch(err => console.error(err));
 

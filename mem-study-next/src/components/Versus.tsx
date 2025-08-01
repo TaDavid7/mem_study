@@ -1,88 +1,47 @@
 "use client";
-import React, { useEffect, useRef, useState, ChangeEvent } from "react";
+import {useEffect, useState, useRef} from "react";
+import {io, Socket} from "socket.io-client";
 
-type Message = {
-  type?: string;
-  payload?: string;
-  [key: string]: any;
-};
+interface MultiplayerProps {
+  roomCode: string;
+  username: string;
+}
 
-const SocketTest: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState<string>("");
-  const socketRef = useRef<WebSocket | null>(null);
+export default function Multiplayer({roomCode, username} : {roomCode:string, username: string}) {
+  const [messages, setMessages] = useState<string[]>([]);
+  const [input, setInput] = useState("");
+  const socket = useRef<Socket | undefined>(undefined);
 
   useEffect(() => {
-    // Connect to WebSocket backend
-    const socket = new window.WebSocket("ws://localhost:5000");
-    socketRef.current = socket;
+    socket.current = io("http://localhost:5000");
 
-    socket.onopen = () => {
-      console.log("WebSocket connected");
-    };
+    socket.current.emit("join-room", roomCode, username);
 
-    socket.onmessage = (event: MessageEvent) => {
-      try {
-        const data: Message = JSON.parse(event.data);
-        setMessages((prev) => [...prev, data]);
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          { payload: event.data }
-        ]);
-      }
-    };
+    socket.current.on("chat", (msg: string) => {
+      setMessages((prev) => [...prev, msg]);
+    });
 
-    socket.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
-
-    socket.onerror = (err) => {
-      console.error("WebSocket error", err);
-    };
-
-    // Cleanup on unmount
     return () => {
-      socket.close();
+      socket.current?.disconnect();
     };
-  }, []);
+  }, [roomCode, username]);
 
   const sendMessage = () => {
-    if (
-      socketRef.current &&
-      socketRef.current.readyState === WebSocket.OPEN &&
-      input.trim() !== ""
-    ) {
-      socketRef.current.send(
-        JSON.stringify({ type: "chat", payload: input })
-      );
+    if(input.trim()){
+      socket.current?.emit("chat", roomCode, input, username);
       setInput("");
     }
   };
 
-  const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
-
-  return (
+  return(
     <div>
-      <h2>WebSocket Demo</h2>
       <div>
-        {messages.map((msg, idx) => (
-          <div key={idx}>
-            {msg.type ? <strong>{msg.type}: </strong> : null}
-            {msg.payload || JSON.stringify(msg)}
-          </div>
+      {messages.map((msg, i) => (
+          <div key={i}>{msg}</div>
         ))}
       </div>
-      <input
-        value={input}
-        onChange={handleInput}
-        placeholder="Type message..."
-      />
+      <input value={input} onChange={e => setInput(e.target.value)} />
       <button onClick={sendMessage}>Send</button>
     </div>
   );
-};
-
-export default SocketTest;
+}

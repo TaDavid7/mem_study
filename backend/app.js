@@ -7,7 +7,7 @@ const Flashcard = require('./models/Flashcard'); //import model
 const Folder = require('./models/Folder') //import Folder
 
 const http = require('http');       //adding webscoket
-const WebSocket = require('ws');
+const {Server} = require('socket.io')
 
 const app = express();
 const PORT = 5000;
@@ -17,27 +17,25 @@ app.use(express.json());
 
 //Connect to MongoDB with Mongoose
 let server;
+let io;
 mongoose.connect(process.env.MONGO_URL)
     .then(() => {
         server = http.createServer(app);    //create HTTP server with express
-        const wss = new WebSocket.Server({server}); //Attack websocket server to http server
-
-        //Handle websocket connections
-        wss.on('connection', (ws) => {
-            console.log('New WebSocket connection');
-
-            ws.on('message', (message) => {
-                wss.clients.forEach((client) => {
-                    if(client !== ws && client.readyState === WebSocket.OPEN){
-                        client.send(message);
-                    }
-                });
-            });
-
-            ws.on('close', () => {
-                console.log('WebSocket connection closed');
-            });
+        //attach socket.io to server
+        io = new Server(server, {
+            cors: {origin: "*",},
         });
+        io.on('connection', (socket) => {
+            console.log(`User connected: `, socket.id);
+            socket.on('join-room', (room, username) => {
+                socket.join(room);
+                io.to(room).emit('chat', `${username} joined the room.`);
+            });
+
+            socket.on('chat', (room, message, username) => {
+                io.to(room).emit('chat', `${username}: ${message}`);
+            });
+        })
         server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
     })
     .catch(err => console.error(err));

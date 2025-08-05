@@ -8,7 +8,7 @@ export interface FlashcardType {
   folder: string;
 }
 
-// Define the props type for QuizGame
+// Define the props type for speedrun
 interface QuizGameProps {
   flashcards: FlashcardType[];
   onQuit: () => void;

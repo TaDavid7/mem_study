@@ -2,15 +2,25 @@
 import {useEffect, useState, useRef} from "react";
 import {io, Socket} from "socket.io-client";
 
+interface FlashcardType {
+  _id: string;
+  question: string;
+  answer: string;
+  folder: string;
+};
+
 interface MultiplayerProps {
   roomCode: string;
   username: string;
-}
+  flashcards: FlashcardType[];
+};
 
-export default function Multiplayer({roomCode, username} : {roomCode:string, username: string}) {
+export default function Multiplayer({roomCode, username, flashcards} : {roomCode:string, username: string, flashcards: FlashcardType[]}) {
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const socket = useRef<Socket | undefined>(undefined);
+
+  const[current, setCurrent] = useState<number>(0);
 
   useEffect(() => {
     socket.current = io("http://localhost:5000");
@@ -35,6 +45,7 @@ export default function Multiplayer({roomCode, username} : {roomCode:string, use
 
   return(
     <div>
+      {flashcards[current]?.question}
       <div>
       {messages.map((msg, i) => (
           <div key={i}>{msg}</div>

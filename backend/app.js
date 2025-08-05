@@ -26,7 +26,7 @@ mongoose.connect(process.env.MONGO_URL)
             cors: {origin: "*",},
         });
         io.on('connection', (socket) => {
-            console.log(`User connected: `, socket.id);
+            //console.log(`User connected: `, socket.id);
             socket.on('join-room', (room, username) => {
                 socket.join(room);
                 io.to(room).emit('chat', `${username} joined the room.`);

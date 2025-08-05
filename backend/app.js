@@ -31,6 +31,10 @@ mongoose.connect(process.env.MONGO_URL)
                 socket.join(room);
                 io.to(room).emit('chat', `${username} joined the room.`);
             });
+            
+            socket.on("next-flashcard", (roomCode) => {
+                io.to(roomCode).emit("next");
+            })
 
             socket.on('chat', (room, message, username) => {
                 io.to(room).emit('chat', `${username}: ${message}`);

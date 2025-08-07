@@ -18,6 +18,7 @@ app.use(express.json());
 //Connect to MongoDB with Mongoose
 let server;
 let io;
+let clientStates = {};
 mongoose.connect(process.env.MONGO_URL)
     .then(() => {
         server = http.createServer(app);    //create HTTP server with express
@@ -30,15 +31,30 @@ mongoose.connect(process.env.MONGO_URL)
             socket.on('join-room', (room, username) => {
                 socket.join(room);
                 io.to(room).emit('chat', `${username} joined the room.`);
+                clientStates[socket.id] = {score: 0};
             });
             
             socket.on("next-flashcard", (roomCode) => {
+                if(clientStates[socket.id]){
+                    clientStates[socket.id].score += 1; 
+                }
                 io.to(roomCode).emit("next");
             })
 
             socket.on('chat', (room, message, username) => {
                 io.to(room).emit('chat', `${username}: ${message}`);
             });
+
+            socket.on('wrong-answer', () => {
+                io.to(socket.id).emit('wrong-confirm');
+            })
+            socket.on('results', () => {
+                const allScores = Object.values(clientStates).map(state => state.score);
+                io.emit('allScores', allScores);
+            } )
+            socket.on('disconnect', () => {
+                delete clientStates;
+            })
         })
         server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
     })

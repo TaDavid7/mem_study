@@ -1,5 +1,5 @@
 "use client";
-import {useEffect, useState, useRef} from "react";
+import {useEffect, useState, useRef, FormEvent} from "react";
 import {io, Socket} from "socket.io-client";
 
 interface FlashcardType {
@@ -26,6 +26,8 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
   const[timer, setTimer] = useState<number>(0);
   const[answered, setAnswered] = useState<boolean>(false);
 
+  const[results, setResults] = useState([]);
+
   useEffect(() => {
     socket.current = io("http://localhost:5000");
 
@@ -39,7 +41,16 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
       setCurrent((prev) => prev + 1);
     } )
 
+    socket.current.on("wrong-confirm", () => {
+      //change this later
+      alert("Wrong answer");
+    })
+    socket.current?.on('allResults', (allScores) => {
+      setResults(allScores);
+    })
+
     return () => {
+      socket.current?.emit("disconnect");
       socket.current?.disconnect();
     };
   }, [roomCode, username]);
@@ -51,15 +62,41 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
     }
   };
 
-  const check = () => {
-    //if(userAnswer){}
-    socket.current?.emit("next-flashcard", roomCode);
+  const showResults = () => {
+    socket.current?.emit('results');
   }
+
+  const checkAnswer = (e: FormEvent) => {
+    e.preventDefault();
+    const correct = flashcards[current].answer.trim().toLowerCase();
+    const guess = userAnswer.trim().toLowerCase();
+
+    if (guess === correct) {
+      socket.current?.emit("next-flashcard", roomCode, username);
+    } else{
+      socket.current?.emit("wrong-answer");
+    }
+  }
+
+  useEffect(() => {
+    setUserAnswer("");
+  }, [current, flashcards]);
 
   return(
     <div>
-      {flashcards[current]?.question}
-      <button onClick = {check}>Submit</button>
+      <div 
+        style = {{textAlign: "center"}}>
+      <p><strong>Question:</strong> {flashcards[current]?.question}</p>
+      <form onSubmit={checkAnswer}>
+        <input
+          value={userAnswer}
+          onChange={e => setUserAnswer(e.target.value)}
+          placeholder="Type your answer"
+          className = "bg-gray-100 border border-gray-300 rounded-lg focus:ring-blue-500"
+          autoFocus
+        />
+      </form>
+      </div>
       <div>
       {messages.map((msg, i) => (
           <div key={i}>{msg}</div>
@@ -67,6 +104,7 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
       </div>
       <input value={input} onChange={e => setInput(e.target.value)} />
       <button onClick={sendMessage}>Send</button>
+      
     </div>
   );
 }

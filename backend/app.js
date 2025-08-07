@@ -31,7 +31,7 @@ mongoose.connect(process.env.MONGO_URL)
             socket.on('join-room', (room, username) => {
                 socket.join(room);
                 io.to(room).emit('chat', `${username} joined the room.`);
-                clientStates[socket.id] = {score: 0};
+                clientStates[socket.id] = {username, score: 0, room};
             });
             
             socket.on("next-flashcard", (roomCode) => {
@@ -48,13 +48,12 @@ mongoose.connect(process.env.MONGO_URL)
             socket.on('wrong-answer', () => {
                 io.to(socket.id).emit('wrong-confirm');
             })
-            socket.on('results', () => {
-                const allScores = Object.values(clientStates).map(state => state.score);
-                io.emit('allScores', allScores);
+            socket.on('results', (room) => {
+                const allScores = Object.values(clientStates)
+                    .filter(state => state.room === room)
+                    .map(state => ({username: state.username, score: state.score}));
+                io.to(room).emit('allScores', allScores);
             } )
-            socket.on('disconnect', () => {
-                delete clientStates;
-            })
         })
         server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
     })

@@ -26,7 +26,7 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
   const[timer, setTimer] = useState<number>(0);
   const[answered, setAnswered] = useState<boolean>(false);
 
-  const[results, setResults] = useState([]);
+  const[results, setResults] = useState<{username: string, score: number}[]>([]);
 
   useEffect(() => {
     socket.current = io("http://localhost:5000");
@@ -45,12 +45,11 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
       //change this later
       alert("Wrong answer");
     })
-    socket.current?.on('allResults', (allScores) => {
+    socket.current?.on('allScores', (allScores) => {
       setResults(allScores);
     })
 
     return () => {
-      socket.current?.emit("disconnect");
       socket.current?.disconnect();
     };
   }, [roomCode, username]);
@@ -62,17 +61,13 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
     }
   };
 
-  const showResults = () => {
-    socket.current?.emit('results');
-  }
-
   const checkAnswer = (e: FormEvent) => {
     e.preventDefault();
     const correct = flashcards[current].answer.trim().toLowerCase();
     const guess = userAnswer.trim().toLowerCase();
-
     if (guess === correct) {
       socket.current?.emit("next-flashcard", roomCode, username);
+      socket.current?.emit('results', roomCode);  //need to move this later
     } else{
       socket.current?.emit("wrong-answer");
     }
@@ -96,6 +91,13 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
           autoFocus
         />
       </form>
+      <ul>
+        {results.map((entry, idx) => (
+          <li key={idx}>
+            {entry.username}: {entry.score}
+          </li>
+        ))}
+      </ul>
       </div>
       <div>
       {messages.map((msg, i) => (

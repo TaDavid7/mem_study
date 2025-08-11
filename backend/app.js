@@ -1,158 +1,114 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-require('dotenv').config();
+// backend/app.js
+require("dotenv").config();
+const http = require("http");
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const { Server } = require("socket.io");
 
-const Flashcard = require('./models/Flashcard'); //import model
-const Folder = require('./models/Folder') //import Folder
+const Folder = require("./models/Folder");
+const Flashcard = require("./models/Flashcard");
+const attachVersus = require("./sockets/versus");
 
-const http = require('http');       //adding webscoket
-const {Server} = require('socket.io')
-
+// --- Express ---
 const app = express();
-const PORT = 5000;
-
-app.use(cors());
 app.use(express.json());
+app.use(cors({ origin: (process.env.CORS_ORIGIN || "*").split(",") }));
 
-//Connect to MongoDB with Mongoose
-let server;
-let io;
-let clientStates = {};
-mongoose.connect(process.env.MONGO_URL)
-    .then(() => {
-        server = http.createServer(app);    //create HTTP server with express
-        //attach socket.io to server
-        io = new Server(server, {
-            cors: {origin: "*",},
-        });
-        io.on('connection', (socket) => {
-            //console.log(`User connected: `, socket.id);
-            socket.on('join-room', (room, username) => {
-                socket.join(room);
-                io.to(room).emit('chat', `${username} joined the room.`);
-                clientStates[socket.id] = {username, score: 0, room};
-            });
-            
-            socket.on("next-flashcard", (roomCode) => {
-                if(clientStates[socket.id]){
-                    clientStates[socket.id].score += 1; 
-                }
-                io.to(roomCode).emit("next");
-            })
 
-            socket.on('chat', (room, message, username) => {
-                io.to(room).emit('chat', `${username}: ${message}`);
-            });
-
-            socket.on('wrong-answer', () => {
-                io.to(socket.id).emit('wrong-confirm');
-            })
-            socket.on('results', (room) => {
-                const allScores = Object.values(clientStates)
-                    .filter(state => state.room === room)
-                    .map(state => ({username: state.username, score: state.score}));
-                io.to(room).emit('allScores', allScores);
-            } )
-        })
-        server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
-    })
-    .catch(err => console.error(err));
-
-//Get all flashcards
-app.get('/api/flashcards', async (req, res) =>{
-    try{
-        const {folderId} = req.query;
-        let filter = {};
-        if(folderId) filter.folder = folderId;
-        const cards = await Flashcard.find(filter);
-        res.json(cards);
-    } catch (err){
-        res.status(500).send('DB error');
-    }
-});
-
-//Get all folders
-app.get('/api/folders', async (req, res) => {
-    const folders = await Folder.find({});
+// --- REST: Folders ---
+app.get("/api/folders", async (req, res) => {
+  try {
+    const folders = await Folder.find({}).sort({ name: 1 }).lean();
     res.json(folders);
-})
-
-//Add a new flashcard
-app.post('/api/flashcards', async (req, res) =>{
-    try{
-        const {question, answer, folder} = req.body;
-        const newCard = new Flashcard({question, answer, folder});
-        await newCard.save(); //save to DB
-        res.status(201).json(newCard);
-    } catch(err){
-        res.status(400).json({error: err.message});
-    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-//Add a folder
-app.post('/api/folders', async (req, res) => {
-    const {name} = req.body;
-    if(!name) return res.status(400).json({error: 'No folder name'});
-    try{
-        const folder = await Folder.create({name});
-        res.status(201).json(folder);
-    } catch (err){
-        if(err.code === 11000){
-            res.status(409).json({error: 'Folder name already exists'});
-        }
-        else{
-            res.status(400).json({error: 'Folder already exists or invalid'});
-        }
-    }
-})
-
-//Edit a flashcard
-app.patch('/api/flashcards/:id', async(req, res) => {
-    try{
-        const updatedFlashcard = await Flashcard.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {new: true, runValidators: true}
-        );
-        if(!updatedFlashcard){
-            return res.status(404).json({message: 'Flashcard not found'});
-        }
-        res.json(updatedFlashcard);
-    } catch(err){
-        res.status(500).json({message: err.message});
-    }
+app.post("/api/folders", async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    if (!name) return res.status(400).json({ error: "name is required" });
+    const folder = await Folder.create({ name });
+    res.status(201).json(folder);
+  } catch (e) {
+    if (e.code === 11000) return res.status(409).json({ error: "folder exists" });
+    res.status(500).json({ error: e.message });
+  }
 });
 
-//Edit a folder
-app.patch('/api/folders/:id', async(req, res) => {
-    const folderId = req.params.id;
-    const{name} = req.body;
-    if(!name) return res.status(400).json({error: "No new folder name"});
-
-    const existing = await Folder.findOne({name});
-    if(existing) return res.status(400).json({error: "Folder name already exists"})
-
-    const folder = await Folder.findByIdAndUpdate(folderId, {name}, {new: true});
-    res.json(folder);
-})
-
-//delete a flashcard
-app.delete('/api/flashcards/:id', async (req, res) =>{
-    try{
-        await Flashcard.findByIdAndDelete(req.params.id)
-        res.status(204).send();
-    } catch(err){
-        res.status(500).send('DB error');
-    }
+app.patch("/api/folders/:id", async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    if (!name) return res.status(400).json({ error: "name is required" });
+    const updated = await Folder.findByIdAndUpdate(req.params.id, { name }, { new: true });
+    if (!updated) return res.status(404).json({ error: "not found" });
+    res.json(updated);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-//delete a folder
-app.delete('/api/folders/:id', async (req, res) =>{
-    const folderId = req.params.id;
-    await Folder.findByIdAndDelete(folderId);
-    await Flashcard.deleteMany({folder:folderId});
-    res.json({success: true});
+app.delete("/api/folders/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Flashcard.deleteMany({ folder: id });
+    const del = await Folder.findByIdAndDelete(id);
+    if (!del) return res.status(404).json({ error: "not found" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- REST: Flashcards ---
+app.get("/api/flashcards", async (req, res) => {
+  try {
+    const q = {};
+    if (req.query.folderId) q.folder = req.query.folderId;
+    const cards = await Flashcard.find(q).sort({ _id: 1 }).lean();
+    res.json(cards);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
+app.post("/api/flashcards", async (req, res) => {
+  try {
+    const { question, answer, folder } = req.body || {};
+    if (!question || !answer || !folder) return res.status(400).json({ error: "question, answer, folder required" });
+    const card = await Flashcard.create({ question, answer, folder });
+    res.status(201).json(card);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch("/api/flashcards/:id", async (req, res) => {
+  try {
+    const { question, answer, folder } = req.body || {};
+    const card = await Flashcard.findByIdAndUpdate(
+      req.params.id,
+      { ...(question && { question }), ...(answer && { answer }), ...(folder && { folder }) },
+      { new: true }
+    );
+    if (!card) return res.status(404).json({ error: "not found" });
+    res.json(card);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/flashcards/:id", async (req, res) => {
+  try {
+    const del = await Flashcard.findByIdAndDelete(req.params.id);
+    if (!del) return res.status(404).json({ error: "not found" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- DB ---
+const MONGO_URL = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/memstudy";
+mongoose
+  .connect(MONGO_URL)
+  .then(() => console.log("✅ Mongo connected"))
+  .catch((err) => { console.error("❌ Mongo connection error", err); process.exit(1); });
+
+// --- HTTP + Socket.IO ---
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: (process.env.CORS_ORIGIN || "*").split(",") } });
+attachVersus(io);
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`🚀 Server listening on http://localhost:${PORT}`));
+
+process.on("SIGINT", async () => { await mongoose.connection.close(); server.close(() => process.exit(0)); });

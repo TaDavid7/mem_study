@@ -8,6 +8,7 @@ const tabs = [
   { id: 'quiz', label: 'Quiz', href: '/quiz' },
   { id: 'review', label: 'Review', href: '/review' },
   { id: 'speedrun', label: 'Speedrun', href: '/speedrun'},
+  { id: 'versus', label: 'Versus', href: '/versus'},
 ];
 
 export default function TabNavigation() {

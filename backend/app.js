@@ -10,13 +10,13 @@ const Folder = require("./models/Folder");
 const Flashcard = require("./models/Flashcard");
 const attachVersus = require("./sockets/versus");
 
-// --- Express ---
+// Express
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: (process.env.CORS_ORIGIN || "*").split(",") }));
+app.use(cors({ origin: process.env.CORS_ORIGIN}));
 
 
-// --- REST: Folders ---
+// Folders ---
 app.get("/api/folders", async (req, res) => {
   try {
     const folders = await Folder.find({}).sort({ name: 1 }).lean();
@@ -56,7 +56,7 @@ app.delete("/api/folders/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- REST: Flashcards ---
+// Flashcards
 app.get("/api/flashcards", async (req, res) => {
   try {
     const q = {};
@@ -81,7 +81,7 @@ app.patch("/api/flashcards/:id", async (req, res) => {
     const card = await Flashcard.findByIdAndUpdate(
       req.params.id,
       { ...(question && { question }), ...(answer && { answer }), ...(folder && { folder }) },
-      { new: true }
+      { new: true }   //returns updated card instead of replaced one
     );
     if (!card) return res.status(404).json({ error: "not found" });
     res.json(card);
@@ -96,19 +96,19 @@ app.delete("/api/flashcards/:id", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- DB ---
-const MONGO_URL = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/memstudy";
+//  DB 
+const MONGO_URL = process.env.MONGO_URL;
 mongoose
   .connect(MONGO_URL)
-  .then(() => console.log("✅ Mongo connected"))
-  .catch((err) => { console.error("❌ Mongo connection error", err); process.exit(1); });
+  .then(() => console.log("Mongo connected"))
+  .catch((err) => { console.error("Mongo connection error", err)});
 
-// --- HTTP + Socket.IO ---
+// HTTP + Socket.IO
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: (process.env.CORS_ORIGIN || "*").split(",") } });
+const io = new Server(server, { cors: { origin: (process.env.CORS_ORIGIN) } });
 attachVersus(io);
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server listening on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`));
 
 process.on("SIGINT", async () => { await mongoose.connection.close(); server.close(() => process.exit(0)); });

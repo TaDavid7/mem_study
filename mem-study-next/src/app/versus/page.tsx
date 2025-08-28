@@ -3,8 +3,13 @@ import Link from "next/link";
 
 export default function VersusLanding() {
   return (
-    <div className="mx-auto max-w-xl p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Versus</h1>
+    <div className="border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 max-w-5xl mx-auto ">
+      <div className="p-6 space-y-6">
+      <h1 className="text-3xl text-left font-bold">Versus</h1>
+      <p className = "text-lg text-left font-medium">Versus is a fast-paced multiplayer flashcard game where you can challenge friends to test your knowledge. 
+        Pick a folder of flashcards, create a room or join one to answer questions correctly. 
+        Every correct answer boosts your score but only the quickest players can stay ahead. Learn, compete, and see who comes out on top!</p>
+        <br></br>
       <p className="text-sm opacity-80">
         Create a room (choose the folder) or join an existing one with a code.
       </p>
@@ -17,6 +22,7 @@ export default function VersusLanding() {
           <div className="text-xl font-semibold">Join room</div>
           <div className="text-sm opacity-70">Enter a code and your name.</div>
         </Link>
+      </div>
       </div>
     </div>
   );

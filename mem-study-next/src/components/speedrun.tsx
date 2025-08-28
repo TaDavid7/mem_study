@@ -32,10 +32,11 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
     }
     const results = () => {
       return(
-      <div style = {{textAlign: "center"}}>
-          <h2>Speedrun Complete!</h2>
-          <h2>Ammount correct: {score}</h2>
-          <h2>Amount incorrect: {incorrect}</h2>
+      <div className = "border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 max-w-5xl mx-auto">
+        <div className="p-6 space-y-6">
+          <h2 className = "text-2xl text-left font-bold">Speedrun Complete!</h2>
+          <h2 className = "text-lg font-medium">Ammount correct: {score}</h2>
+          <h2 className = "text-lg font-medium">Amount incorrect: {incorrect}</h2>
           <button 
             onClick={reset}
             className = "bg-blue-400 text-white px-4 py-2 rounded-2xl hover:bg-blue-600 transition"
@@ -43,6 +44,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
           <button 
             className = "bg-red-400 text-white px-4 py-2 rounded-2xl hover:bg-red-600 transition"
             onClick={onQuit} style={{ marginTop: "1rem" }}>Exit</button>
+        </div>
       </div>
       )
     };
@@ -68,22 +70,27 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
             
         </div>);
 
+    //shuffle cards
     useEffect(() => {
       setShuffledFlashcards(shuffleArray(flashcards));
     },[refresh, flashcards])
+
+    //start timer
+    useEffect( () => {
+      if(showResults) return;
+      const id = setInterval(() => {
+        setTimer(t => Math.max(0, t-1));
+      }, 1000);
+      return () => clearInterval(id);
+    }, [showResults]);
 
     useEffect(() => {
         if (timer === 0) {
             setFeedback(`Time's up!`);
             setAnswered(true);
-            return; // Stop timer
+            
         }
-        const interval = setInterval(() => {
-            setTimer(t => t - 1);
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [timer, answered, current, flashcards]);
+    }, [timer]);
 
 
     useEffect(() => {
@@ -116,6 +123,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
       setFeedback("Correct!");
       setScore(score + 1);
     } else {
+      console.log("cat");
       setFeedback(`Incorrect. The answer was: ${shuffledFlashcards[current].answer}`);
       setIncorrect(incorrect + 1);
     }
@@ -144,13 +152,14 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
   return (
     <div>
       {!showResults ? (
-      <div>
-        <h2>Speedrun Mode</h2>
-        <div><strong>Time Left:</strong> {timer} seconds</div>
+      <div className = "border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 max-w-5xl mx-auto">
+        <div className="p-6 space-y-6">
+        <div className = "text-2xl text-left font-bold">Speedrun Mode</div>
+        <strong>Time Left:</strong> {timer} seconds
 
-        <div 
-          style = {{textAlign: "center"}}>
-          <p><strong>Question:</strong> {shuffledFlashcards[current]?.question}</p>
+        <br></br>
+        <div className = "text-center">
+          <p className = "text-lg font-medium"><strong>Question:</strong> {shuffledFlashcards[current]?.question}</p>
           <form onSubmit={checkAnswer}>
             <input
               value={userAnswer}
@@ -168,11 +177,13 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
         <div style = {{textAlign: "center"}}>
           <button 
             className = "bg-blue-400 text-white px-4 py-2 rounded-2xl hover:bg-blue-600 transition"
-            onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>Stop </button> &nbsp; &nbsp;
+            onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>Finish </button> &nbsp; &nbsp;
           <button 
             className = "bg-red-400 text-white px-4 py-2 rounded-2xl hover:bg-red-600 transition"
             onClick={onQuit} style={{ marginTop: "1rem" }}>Exit</button>
         </div>
+        </div>
+
       </div>
       ) : (null)}
       {showResults ? results() : null}

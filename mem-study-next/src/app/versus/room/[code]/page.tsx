@@ -14,8 +14,10 @@ export default function RoomPage() {
   const [answered, setAnswered] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [feedback, setFeedback] = useState<"idle" | "correct" | "wrong">("idle");
-
+  const [showResults, setShowResults] = useState(false);
+  const [finalState, setFinalState] = useState<RoomState | null>(null);
   const socketRef = useRef(getSocket());
+
 
   // Subscribe to room state and ensure we are joined
   useEffect(() => {
@@ -31,23 +33,41 @@ export default function RoomPage() {
           .catch(console.error);
       }
     }
-
-    function onGuessResult(payload: { correct: boolean }) {
+    
+    async function onReveal(payload: {index: number}){
+      if(state && payload.index !== state.currentIndex ) return;
+      setRevealed(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      nextQuestion();
+    }
+    async function onGuessResult(payload: { correct: boolean }) {
       if (payload.correct) {
         setAnswered(true);
         setFeedback("correct");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        nextQuestion();
       } else {
         setFeedback("wrong");
       }
     }
 
+    function onResult(rs: RoomState){
+      console.log("results payload:", rs);
+      setFinalState(rs);
+      setShowResults(true);
+    }
+
     socket.emit("joinRoom", { code: String(code).toUpperCase(), username: meName });
     socket.on("roomState", onState);
     socket.on("guessResult", onGuessResult);
+    socket.on("revealAnswer", onReveal);
+    socket.on("results", onResult);
 
     return () => {
       socket.off("roomState", onState);
       socket.off("guessResult", onGuessResult);
+      socket.off("revealAnswer", onReveal)
+      socket.off("results", onResult);
     };
   }, [code, meName]);
 
@@ -74,6 +94,10 @@ export default function RoomPage() {
     socketRef.current.emit("nextQuestion", { code: String(code).toUpperCase() });
   }
 
+  function stuck(){
+    socketRef.current.emit("revealAnswer", { code: String(code).toUpperCase() });
+  }
+
   function submitGuess(e: React.FormEvent) {
     e.preventDefault();
     if (!currentCard) return;
@@ -85,7 +109,8 @@ export default function RoomPage() {
   const players = (state?.players ?? []).sort((a, b) => b.score - a.score);
 
   return (
-    <div className="mx-auto max-w-3xl p-6 space-y-6">
+    <div>
+      {!showResults ? (<div className="mx-auto max-w-3xl p-6 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Room {String(code).toUpperCase()}</h1>
         <span className="text-sm opacity-70">{state?.started ? "In game" : "Lobby"}</span>
@@ -142,15 +167,9 @@ export default function RoomPage() {
           </div>
 
           <div className="flex gap-2 items-center">
-            <button
-              type="button"
-              onClick={() => setRevealed((v) => !v)}
-              className="rounded-2xl px-3 py-1 shadow hover:shadow-md"
-            >
-              {revealed ? "Hide answer" : "Show answer"}
-            </button>
+      
             {meIsHost && (
-              <button onClick={nextQuestion} className="rounded-2xl px-4 py-2 shadow hover:shadow-md">Next</button>
+              <button onClick={stuck} className="rounded-2xl px-4 py-2 shadow hover:shadow-md">Everyone Stuck?</button>
             )}
           </div>
 
@@ -161,6 +180,17 @@ export default function RoomPage() {
           )}
         </section>
       )}
-    </div>
+    </div>) : (
+      <div>
+        {players.map((p: RoomPlayer) => (
+            <li key={p.socketId} className="rounded-xl border p-2 flex items-center justify-between">
+              <span>{p.username}</span>
+              <span className="text-sm opacity-70">{p.score}</span>
+            </li>
+          ))}
+      </div>
+    )}
+    
+  </div>
   );
 }

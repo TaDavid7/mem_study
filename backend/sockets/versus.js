@@ -139,13 +139,24 @@ module.exports = function attachVersus(io) {
       code = String(code || "").toUpperCase();
       const room = rooms.get(code);
       if (!room || !room.started) return;
-      if (socket.id !== room.hostId) return; // keep control centralized
-
       if (room.currentIndex < Math.max(0, room.deck.length - 1)) {
         room.currentIndex += 1;
         io.to(code).emit("roomState", serialize(room));
       }
+      else{
+        io.to(code).emit("results", serialize(room));
+      }
     });
+
+    //Reveal answer
+    socket.on("revealAnswer", ({code}) => {
+      code = String(code || "").toUpperCase();
+      const room = rooms.get(code);
+      if(!room || !room.started) return;
+      if(socket.id !== room.hostId) return;
+
+      io.to(code).emit("revealAnswer", {index: room.currentIndex});
+    })
 
     // Optional for special typecasting
     socket.on("correctAnswer", ({ code, delta = 1 }) => {

@@ -64,11 +64,13 @@ export default function QuizPage() {
   return (
     <div>
       {!gameReady ? (
-        <div className="p-6">
-          <div className="mx-auto max-w-xl p-6 space-y-6"
-            >
-            <h1 className="text-3xl font-bold">Speedrun</h1>
-            <label className="mr-2">Select Folder:</label>
+        <div className = "border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 max-w-5xl mx-auto">
+          <div className="p-6 space-y-6">
+            <h1 className="text-3xl text-left font-bold">Speedrun</h1>
+            <div className = "text-lg text-left font-medium">A fast-paced game where you try to answer as many questions as possible. 
+              Each card presents a question, and you type in your answer before moving to the next one. 
+              The deck randomizes and recycles.</div> <br></br>
+            <label className="text-lg font-medium">Select Folder: </label>
             <>
               <select
                 value={selectedFolder}
@@ -83,12 +85,12 @@ export default function QuizPage() {
               </select> <br></br><br></br>
             </>
                 <input
-              value={time}
-              onChange={e => setTime(e.target.value)}
-              placeholder="Type time in seconds"
-              className="w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
-                    text-m bg-gray-50 outline-none transition duration-300
-                    focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
+                  value={time}
+                  onChange={e => setTime(e.target.value)}
+                  placeholder="Type time in seconds"
+                  className="w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
+                        text-m bg-gray-50 outline-none transition duration-300
+                        focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
               autoFocus
             /> <br></br> 
             

@@ -23,7 +23,7 @@ export default function RoomPage() {
 
     function onState(rs: RoomState) {
       setState(rs);
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const base = "http://localhost:5000";
       if (rs.folderId) {
         fetch(`${base}/api/flashcards?folderId=${rs.folderId}`)
           .then((r) => r.json())

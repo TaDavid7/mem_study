@@ -25,6 +25,8 @@ export default function QuizPage() {
   const [selectedFolder, setSelectedFolder] = useState("");
   const [flashcards, setFlashcards] = useState<FlashcardType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [time, setTime] = useState<string>("");
+  const [gameReady, setGameReady] = useState<boolean>(false);
 
 
   //load folders
@@ -61,32 +63,50 @@ export default function QuizPage() {
 
   return (
     <div>
-      {!selectedFolder ? (
+      {!gameReady ? (
         <div className="p-6">
-        <div className="mb-6 items-center gap-4">
-          <label className="mr-2">Select Folder:</label>
-          <>
-            <select
-              value={selectedFolder}
-              onChange={e => setSelectedFolder(e.target.value)}
-              className="p-2 rounded bg-gray-200 text-gray-600"
-              style={{ minWidth: "180px" }}
-            >
-              <option value="">-- Select --</option>
-              {folders.map(folder => (
-                <option key={folder._id} value={folder._id}>{folder.name}</option>
-              ))}
-            </select> <br></br>
-            <button
-              className = "bg-green-400 text-black px-4 py-2 rounded hover:bg-green-600 transition" 
-              onClick={exitingQuizGame} style={{ marginTop: "1rem" }}>Quit Speedrun
-            </button>
-          </>
+          <div className="mb-6 items-center gap-4"
+            style = {{textAlign: "center"}}>
+            <input
+              value={time}
+              onChange={e => setTime(e.target.value)}
+              placeholder="Type time in seconds"
+              className="w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
+                    text-m bg-gray-50 outline-none transition duration-300
+                    focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
+              autoFocus
+            /> <br></br> <br></br>
+            <label className="mr-2">Select Folder:</label>
+            <>
+              <select
+                value={selectedFolder}
+                onChange={e => setSelectedFolder(e.target.value)}
+                className="p-2 rounded-2xl bg-gray-200 text-gray-600"
+                style={{ minWidth: "180px" }}
+              >
+                <option value="">-- Select --</option>
+                {folders.map(folder => (
+                  <option key={folder._id} value={folder._id}>{folder.name}</option>
+                ))}
+              </select> <br></br>
+            </>
+            
+              <button
+                className = "bg-blue-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" 
+                disabled = {!selectedFolder || !time}
+                onClick={() => {setGameReady(true)}} style={{ marginTop: "1rem" }}> Start
+              </button> &nbsp; &nbsp;
+
+              <button
+                className = "bg-red-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-red-600 transition" 
+                onClick={exitingQuizGame} style={{ marginTop: "1rem" }}> Exit
+              </button>
+          </div>
         </div>
-      </div>
       ): 
         (<Speedrun
           flashcards={flashcards}
+          time = {time}
           onQuit={exitingQuizGame}
         />)}
 

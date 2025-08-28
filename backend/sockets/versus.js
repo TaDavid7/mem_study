@@ -147,7 +147,7 @@ module.exports = function attachVersus(io) {
       }
     });
 
-    // Optional legacy event (support older client): manually award points
+    // Optional for special typecasting
     socket.on("correctAnswer", ({ code, delta = 1 }) => {
       code = String(code || "").toUpperCase();
       const room = rooms.get(code);

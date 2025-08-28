@@ -13,7 +13,7 @@ export default function CreateRoomPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const base = "http://localhost:5000";
     fetch(`${base}/api/folders`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
       .then((data) => setFolders(Array.isArray(data) ? data : []))

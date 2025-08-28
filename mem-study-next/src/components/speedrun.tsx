@@ -11,10 +11,11 @@ export interface FlashcardType {
 // Define the props type for speedrun
 interface QuizGameProps {
   flashcards: FlashcardType[];
+  time: string;
   onQuit: () => void;
 }
 
-const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
+const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
     const [current, setCurrent] = useState<number>(0);
     const [userAnswer, setUserAnswer] = useState<string>('');
     const [feedback, setFeedback] = useState<string>('');
@@ -23,12 +24,21 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
     const [answered, setAnswered] = useState<boolean>(false);
     const [showResults, setShowResults] = useState(false);
 
+    const reset = () => {
+      window.location.reload();
+    }
     const results = () => {
       return(
-      <div>
+      <div style = {{textAlign: "center"}}>
           <h2>Speedrun Complete!</h2>
           <h2>Score is: {score}/{flashcards.length}</h2>
-          <button onClick={onQuit}>Back to Cards</button>
+          <button 
+            onClick={reset}
+            className = "bg-blue-400 text-white px-4 py-2 rounded-2xl hover:bg-blue-600 transition"
+          >Take Again</button> &nbsp; &nbsp;
+          <button 
+            className = "bg-red-400 text-white px-4 py-2 rounded-2xl hover:bg-red-600 transition"
+            onClick={onQuit} style={{ marginTop: "1rem" }}>Exit</button>
       </div>
       )
     };
@@ -41,13 +51,15 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
             <button 
             className = "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
             onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Speedrun</button>
+            
         </div>);
 
    
     useEffect(() => {
         if (timer === 0) {
-            setFeedback(`Time's up! The answer was: ${flashcards[current].answer}`);
+            setFeedback(`Time's up!`);
             setAnswered(true);
+
             return; // Stop timer
         }
         const interval = setInterval(() => {
@@ -57,9 +69,17 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
         return () => clearInterval(interval);
     }, [timer, answered, current, flashcards]);
 
-    // Reset timer and answered state on new question
+
     useEffect(() => {
+      let timeofsec = Number(time.trim());
+      //checks if valid number and positive
+      if(Number.isFinite(timeofsec) && (timeofsec > 0)){
+        setTimer(timeofsec);
+      } 
+      else{
         setTimer(80);
+      }
+        
     },[]);
     
     useEffect(() => {
@@ -97,37 +117,46 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, onQuit }) => {
     setCurrent(current + 1);
   };
 
+
+
+
   return (
     <div>
       {!showResults ? (
-      <div className = "">
-      <h2>Speedrun Mode</h2>
-      <div><strong>Time Left:</strong> {timer} seconds</div>
+      <div>
+        <h2>Speedrun Mode</h2>
+        <div><strong>Time Left:</strong> {timer} seconds</div>
 
-      <div 
-        style = {{textAlign: "center"}}>
-      <p><strong>Question:</strong> {flashcards[current]?.question}</p>
-      <form onSubmit={checkAnswer}>
-        <input
-          value={userAnswer}
-          onChange={e => setUserAnswer(e.target.value)}
-          placeholder="Type your answer"
-          className = "bg-gray-100 border border-gray-300 rounded-lg focus:ring-blue-500"
-          autoFocus
-        />
-      </form>
-      <div style={{ minHeight: 30, margin: "1em 0" }}>{feedback}</div>
-      </div>
+        <div 
+          style = {{textAlign: "center"}}>
+          <p><strong>Question:</strong> {flashcards[current]?.question}</p>
+          <form onSubmit={checkAnswer}>
+            <input
+              value={userAnswer}
+              onChange={e => setUserAnswer(e.target.value)}
+              placeholder="Type your answer"
+              className="w-40 px-2 py-1 border-2 border-gray-300 rounded-lg 
+                    text-m bg-gray-50 outline-none transition duration-300
+                    focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
+              autoFocus
+            />
+          </form>
+        </div>    
+        <div className = "my-2 text-center min-h-[2rem]">{feedback}</div>
+        
+        <div style = {{textAlign: "center"}}>
+          <button 
+            className = "bg-blue-400 text-white px-4 py-2 rounded-2xl hover:bg-blue-600 transition"
+            onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>Stop </button> &nbsp; &nbsp;
+          <button 
+            className = "bg-red-400 text-white px-4 py-2 rounded-2xl hover:bg-red-600 transition"
+            onClick={onQuit} style={{ marginTop: "1rem" }}>Exit</button>
+        </div>
       </div>
       ) : (null)}
       {showResults ? results() : null}
       <div style = {{textAlign: "center"}}>
-      <button 
-        className = "bg-blue-400 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-        onClick={() => setShowResults(true)} style={{ marginTop: "1rem" }}>See Results </button> &nbsp; &nbsp;
-      <button 
-        className = "bg-green-400 text-black px-4 py-2 rounded hover:bg-green-600 transition"
-        onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Speedrun</button>
+      
       </div>
     </div>
   );

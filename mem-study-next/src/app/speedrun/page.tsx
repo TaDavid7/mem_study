@@ -65,17 +65,9 @@ export default function QuizPage() {
     <div>
       {!gameReady ? (
         <div className="p-6">
-          <div className="mb-6 items-center gap-4"
-            style = {{textAlign: "center"}}>
-            <input
-              value={time}
-              onChange={e => setTime(e.target.value)}
-              placeholder="Type time in seconds"
-              className="w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
-                    text-m bg-gray-50 outline-none transition duration-300
-                    focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
-              autoFocus
-            /> <br></br> <br></br>
+          <div className="mx-auto max-w-xl p-6 space-y-6"
+            >
+            <h1 className="text-3xl font-bold">Speedrun</h1>
             <label className="mr-2">Select Folder:</label>
             <>
               <select
@@ -88,8 +80,17 @@ export default function QuizPage() {
                 {folders.map(folder => (
                   <option key={folder._id} value={folder._id}>{folder.name}</option>
                 ))}
-              </select> <br></br>
+              </select> <br></br><br></br>
             </>
+                <input
+              value={time}
+              onChange={e => setTime(e.target.value)}
+              placeholder="Type time in seconds"
+              className="w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
+                    text-m bg-gray-50 outline-none transition duration-300
+                    focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
+              autoFocus
+            /> <br></br> 
             
               <button
                 className = "bg-blue-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" 

@@ -20,9 +20,12 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
     const [userAnswer, setUserAnswer] = useState<string>('');
     const [feedback, setFeedback] = useState<string>('');
     const [score, setScore] = useState<number>(0);
-    const [timer, setTimer] = useState<number>(0);
+    const [incorrect, setIncorrect] = useState<number>(0);
+    const [timer, setTimer] = useState<number>(20);
     const [answered, setAnswered] = useState<boolean>(false);
+    const [refresh, setRefresh] = useState<boolean>(false);
     const [showResults, setShowResults] = useState(false);
+    const [shuffledFlashcards, setShuffledFlashcards] = useState<FlashcardType[]>([]);
 
     const reset = () => {
       window.location.reload();
@@ -31,7 +34,8 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
       return(
       <div style = {{textAlign: "center"}}>
           <h2>Speedrun Complete!</h2>
-          <h2>Score is: {score}/{flashcards.length}</h2>
+          <h2>Ammount correct: {score}</h2>
+          <h2>Amount incorrect: {incorrect}</h2>
           <button 
             onClick={reset}
             className = "bg-blue-400 text-white px-4 py-2 rounded-2xl hover:bg-blue-600 transition"
@@ -42,6 +46,16 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
       </div>
       )
     };
+
+    const shuffleArray = (arr: FlashcardType[]) => {
+      //Fisher-Yates Shuffle
+      const copy = [...arr];
+      for(let i = copy.length -1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i+1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
     
     if (!flashcards.length)
         return (
@@ -54,12 +68,14 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
             
         </div>);
 
-   
+    useEffect(() => {
+      setShuffledFlashcards(shuffleArray(flashcards));
+    },[refresh, flashcards])
+
     useEffect(() => {
         if (timer === 0) {
             setFeedback(`Time's up!`);
             setAnswered(true);
-
             return; // Stop timer
         }
         const interval = setInterval(() => {
@@ -85,8 +101,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
     useEffect(() => {
         setAnswered(false);
         setUserAnswer("");
-        setFeedback("");
-    }, [current, flashcards]);
+    }, [current]);
 
 
   // Handle answer submission
@@ -94,26 +109,32 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
     e.preventDefault();
     if (answered || timer === 0) return; // Prevent double answers or time's up
 
-    const correct = flashcards[current].answer.trim().toLowerCase();
+    const correct = shuffledFlashcards[current].answer.trim().toLowerCase();
     const guess = userAnswer.trim().toLowerCase();
 
     if (guess === correct) {
       setFeedback("Correct!");
       setScore(score + 1);
     } else {
-      setFeedback(`Incorrect. The answer was: ${flashcards[current].answer}`);
+      setFeedback(`Incorrect. The answer was: ${shuffledFlashcards[current].answer}`);
+      setIncorrect(incorrect + 1);
     }
     setAnswered(true);
-    if (current >= (flashcards.length-1)){
-      setShowResults(true);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    if (current == shuffledFlashcards.length-1){
+      setCurrent(0);
+      setRefresh((r) => !r);
+      setFeedback("");
     }
     else{
-        await new Promise(resolve => setTimeout(resolve, 500));
         handleNext();
     }
   };
 
   const handleNext = () => {
+    setFeedback("");
     setCurrent(current + 1);
   };
 
@@ -129,7 +150,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
 
         <div 
           style = {{textAlign: "center"}}>
-          <p><strong>Question:</strong> {flashcards[current]?.question}</p>
+          <p><strong>Question:</strong> {shuffledFlashcards[current]?.question}</p>
           <form onSubmit={checkAnswer}>
             <input
               value={userAnswer}

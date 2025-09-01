@@ -1,9 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Speedrun, {FlashcardType } from "@/components/speedrun"
-import Flashcard from "@/components/Flashcard";
-import Link from "next/link";
 
 
 type Card = {

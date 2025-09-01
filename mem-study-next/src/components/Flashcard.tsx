@@ -19,10 +19,10 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onDelete, onEdit }) => {
   const [flipped, setFlipped] = useState(false);
 
   return (
-  <div className="flex flex-col items-center w-full max-w-2xl mx-auto mb-8">
+  <div className="flex-shrink-0 w-full max-w-2xl mx-auto">
     <div
       onClick={() => setFlipped(!flipped)}
-      className="rounded-xl p-6 w-full min-h-[200px] text-center border border-gray-500 bg-transparent text-gray-700 cursor-pointer hover:shadow-lg transition flex flex-col justify-center items-center"
+      className="rounded-2xl p-6 w-full h-[360px] text-center border border-gray-500 bg-transparent text-gray-700 cursor-pointer hover:shadow-lg transition flex flex-col justify-center items-center"
     >
       {flipped ? (
         <>
@@ -36,13 +36,13 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onDelete, onEdit }) => {
     </div>
       <div className="flex gap-4 justify-center mt-4">
       <button
-        className = "mt-3 bg-blue-500 text-white px-4 py-2 hover:bg-blue-600 transition"
+        className = "mt-3 bg-blue-500 text-white rounded-2xl px-4 py-2 hover:bg-blue-600 transition"
         onClick={() => onEdit(card._id, card.question, card.answer)}
       >
         Edit
       </button> &nbsp; &nbsp; &nbsp;
       <button
-        className="mt-3 bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition"
+        className="mt-3 bg-red-500 text-white rounded-2xl px-4 py-2 hover:bg-red-600 transition"
         onClick={() => onDelete(card._id)}
       >
         Delete

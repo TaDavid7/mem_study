@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 
 // Define the Flashcard type
 export interface FlashcardType {
@@ -59,8 +59,8 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
       return copy;
     }
     
-    if (!flashcards.length)
-        return (
+    if (!flashcards.length){
+      return (
         <div>
             No flashcards available.
             <br></br>
@@ -69,6 +69,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
             onClick={onQuit} style={{ marginTop: "1rem" }}>Quit Speedrun</button>
             
         </div>);
+    }
 
     //shuffle cards
     useEffect(() => {
@@ -94,7 +95,7 @@ const Speedrun: React.FC<QuizGameProps> = ({ flashcards, time, onQuit }) => {
 
 
     useEffect(() => {
-      let timeofsec = Number(time.trim());
+      const timeofsec = Number(time.trim());
       //checks if valid number and positive
       if(Number.isFinite(timeofsec) && (timeofsec > 0)){
         setTimer(timeofsec);

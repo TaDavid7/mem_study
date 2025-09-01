@@ -9,11 +9,6 @@ interface FlashcardType {
   folder: string;
 };
 
-interface MultiplayerProps {
-  roomCode: string;
-  username: string;
-  flashcards: FlashcardType[];
-};
 
 export default function Multiplayer({roomCode, username, flashcards} : {roomCode:string, username: string, flashcards: FlashcardType[]}) {
   const [messages, setMessages] = useState<string[]>([]);
@@ -22,9 +17,7 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
 
   const[current, setCurrent] = useState<number>(0);
   const[userAnswer, setUserAnswer] = useState<string>('');
-  const[feedback, setFeedback] = useState<string>('');
-  const[timer, setTimer] = useState<number>(0);
-  const[answered, setAnswered] = useState<boolean>(false);
+ 
 
   const[results, setResults] = useState<{username: string, score: number}[]>([]);
 

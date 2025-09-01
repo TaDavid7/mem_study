@@ -1,8 +1,6 @@
 "use client";
-import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import {usePathname} from 'next/navigation';
+import React, { useState, useEffect, FormEvent } from "react";
 import Flashcard from "@/components/Flashcard";
-import Link from "next/link";
 
 //Type for a flashcard object
 type Card = {
@@ -38,6 +36,9 @@ const App: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState("");
   const [folderDropdownOpen, setFolderDropdownOpen] = useState<string | null>(null);
 
+  //Index
+  const [cardindex, setCardIndex] = useState(0);
+
 
 
   //loads folders
@@ -54,6 +55,7 @@ const App: React.FC = () => {
       setFlashcards([]);
       return;
     }
+    setCardIndex(0);
     fetch(`http://localhost:5000/api/flashcards?folderId=${selectedFolder}`)
       .then(res => res.json())
       .then((cards: Card[]) => setFlashcards(cards));
@@ -163,9 +165,29 @@ const App: React.FC = () => {
       });
   };
 
-  return (
-    <div className="min-h-screen text-b bg-white font-sans p-4">
+  const decreaseIndex = (length: number) => {
+    if(cardindex === 0){
+      setCardIndex(length-1);
+    }
+    else{
+      setCardIndex((l) => l-1);
+    }
+  }
 
+  const increaseIndex = (length: number) => {
+    if(cardindex === length-1){
+      setCardIndex(0);
+    }
+    else{
+      setCardIndex((l) => l+1);
+    }
+  }
+
+  return (
+    <div>
+    <div className="border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 max-w-5xl mx-auto">
+      <div className = "p-6 space-y-6">
+        <h1 className="text-3xl text-left font-bold">Home</h1>
       {/* Folder dropdown and actions */}
       <div className="mb-6 flex items-center gap-4">
         <label className="mr-2">Select Folder:</label>
@@ -298,22 +320,41 @@ const App: React.FC = () => {
       )}
 
 
-      {/* Card list */}
-      <div className="flex flex-col items-center gap-6">
-        {flashcards.map(card =>
-          <Flashcard
-            key={card._id}
-            card={card}
-            onDelete={handleDelete}
-            onEdit={handleEditStart}
-          />
-        )}
+      
+    </div>
+    </div>
+    {/* Card list */}
+    <br></br>
+      
+      <div>
+        {flashcards.length > 0 ? (
+          <div className="relative w-full max-w-2xl mx-auto">
+            <Flashcard
+              card={flashcards[cardindex]}
+              onDelete={handleDelete}
+              onEdit={handleEditStart}
+            />
+
+            <button
+              type="button"
+              onClick={() => decreaseIndex(flashcards.length)}
+              className="absolute -left-16 top-1/2 -translate-y-1/2 -mt-8
+                        bg-blue-400 text-white px-3 py-1 rounded-2xl hover:bg-blue-600 z-10"
+            >&lt;
+            </button>
+
+            <button
+              type="button"
+              onClick={() => increaseIndex(flashcards.length)}
+              className="absolute -right-16 top-1/2 -translate-y-1/2 -mt-8
+                        bg-blue-400 text-white px-3 py-1 rounded-2xl hover:bg-blue-600 z-10"
+            >&gt;
+            </button>
+          </div>
+        ) : (null)}
       </div>
     </div>
   );
-
-
-
 };
 
 export default App;

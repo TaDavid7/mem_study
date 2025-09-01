@@ -17,7 +17,6 @@ type Folder = {
 };
 
 export default function QuizPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState("");

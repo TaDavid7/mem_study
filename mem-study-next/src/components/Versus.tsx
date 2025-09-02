@@ -22,7 +22,7 @@ export default function Multiplayer({roomCode, username, flashcards} : {roomCode
   const[results, setResults] = useState<{username: string, score: number}[]>([]);
 
   useEffect(() => {
-    socket.current = io("http://localhost:5000");
+    socket.current = io(process.env.NEXT_PUBLIC_SOCKET_URL as string, { transports: ["websocket"] });
 
     socket.current.emit("join-room", roomCode, username);
 

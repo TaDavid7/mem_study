@@ -10,18 +10,41 @@ const Folder = require("./models/Folder");
 const Flashcard = require("./models/Flashcard");
 const attachVersus = require("./sockets/versus");
 
-// Express
+// --- Express
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: process.env.CORS_ORIGIN}));
 
+// Build allowed origins list from env (comma-separated)
+const allowed = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
 
-// Folders ---
-app.get("/api/folders", async (req, res) => {
+// CORS middleware: allow listed origins AND no-origin requests (curl/health)
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // server-to-server / curl / health checks
+      return cb(null, allowed.includes(origin));
+    },
+    credentials: true,
+  })
+);
+
+// Friendly root + health endpoints
+app.get("/", (_req, res) => res.status(200).send("API OK"));
+app.get("/health", (_req, res) =>
+  res.status(200).json({ ok: true, uptime: process.uptime() })
+);
+
+// --- Folders
+app.get("/api/folders", async (_req, res) => {
   try {
     const folders = await Folder.find({}).sort({ name: 1 }).lean();
     res.json(folders);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post("/api/folders", async (req, res) => {
@@ -40,10 +63,16 @@ app.patch("/api/folders/:id", async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     if (!name) return res.status(400).json({ error: "name is required" });
-    const updated = await Folder.findByIdAndUpdate(req.params.id, { name }, { new: true });
+    const updated = await Folder.findByIdAndUpdate(
+      req.params.id,
+      { name },
+      { new: true }
+    );
     if (!updated) return res.status(404).json({ error: "not found" });
     res.json(updated);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete("/api/folders/:id", async (req, res) => {
@@ -53,26 +82,35 @@ app.delete("/api/folders/:id", async (req, res) => {
     const del = await Folder.findByIdAndDelete(id);
     if (!del) return res.status(404).json({ error: "not found" });
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Flashcards
+// --- Flashcards
 app.get("/api/flashcards", async (req, res) => {
   try {
     const q = {};
     if (req.query.folderId) q.folder = req.query.folderId;
     const cards = await Flashcard.find(q).sort({ _id: 1 }).lean();
     res.json(cards);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post("/api/flashcards", async (req, res) => {
   try {
     const { question, answer, folder } = req.body || {};
-    if (!question || !answer || !folder) return res.status(400).json({ error: "question, answer, folder required" });
+    if (!question || !answer || !folder)
+      return res
+        .status(400)
+        .json({ error: "question, answer, folder required" });
     const card = await Flashcard.create({ question, answer, folder });
     res.status(201).json(card);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.patch("/api/flashcards/:id", async (req, res) => {
@@ -80,12 +118,18 @@ app.patch("/api/flashcards/:id", async (req, res) => {
     const { question, answer, folder } = req.body || {};
     const card = await Flashcard.findByIdAndUpdate(
       req.params.id,
-      { ...(question && { question }), ...(answer && { answer }), ...(folder && { folder }) },
-      { new: true }   //returns updated card instead of replaced one
+      {
+        ...(question && { question }),
+        ...(answer && { answer }),
+        ...(folder && { folder }),
+      },
+      { new: true } // return updated doc
     );
     if (!card) return res.status(404).json({ error: "not found" });
     res.json(card);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete("/api/flashcards/:id", async (req, res) => {
@@ -93,22 +137,48 @@ app.delete("/api/flashcards/:id", async (req, res) => {
     const del = await Flashcard.findByIdAndDelete(req.params.id);
     if (!del) return res.status(404).json({ error: "not found" });
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-//  DB 
+// --- DB
 const MONGO_URL = process.env.MONGO_URL;
-mongoose
-  .connect(MONGO_URL)
-  .then(() => console.log("Mongo connected"))
-  .catch((err) => { console.error("Mongo connection error", err)});
+if (!MONGO_URL) {
+  console.error("MONGO_URL is missing");
+  process.exit(1);
+}
 
-// HTTP + Socket.IO
+mongoose
+  .connect(MONGO_URL, { serverSelectionTimeoutMS: 8000 })
+  .then(() => console.log("Mongo connected"))
+  .catch((err) => {
+    console.error("Mongo connection error:", err?.message || err);
+    // process.exit(1); // optional: fail hard if you prefer
+  });
+
+// --- HTTP + Socket.IO
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: (process.env.CORS_ORIGIN) } });
+const io = new Server(server, {
+  cors: {
+    origin: allowed.length ? allowed : true,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+
+// mount your socket logic
 attachVersus(io);
 
+// --- Start
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
 
-process.on("SIGINT", async () => { await mongoose.connection.close(); server.close(() => process.exit(0)); });
+// graceful shutdown
+process.on("SIGINT", async () => {
+  await mongoose.connection.close();
+  server.close(() => process.exit(0));
+});

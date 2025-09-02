@@ -13,8 +13,7 @@ export default function CreateRoomPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const base = "http://localhost:5000";
-    fetch(`${base}/api/folders`)
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/folders`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
       .then((data) => setFolders(Array.isArray(data) ? data : []))
       .catch((e) => setError(`Failed to load folders: ${e.message || e}`));

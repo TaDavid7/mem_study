@@ -43,7 +43,7 @@ const App: React.FC = () => {
 
   //loads folders
   useEffect( () => {
-    fetch("http://localhost:5000/api/folders")
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/folders`)
       .then(res => res.json())
       .then((folders: Folder[]) => setFolders(folders));
   }, []);
@@ -56,7 +56,7 @@ const App: React.FC = () => {
       return;
     }
     setCardIndex(0);
-    fetch(`http://localhost:5000/api/flashcards?folderId=${selectedFolder}`)
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/flashcards?folderId=${selectedFolder}`)
       .then(res => res.json())
       .then((cards: Card[]) => setFlashcards(cards));
   }, [selectedFolder]);
@@ -64,7 +64,7 @@ const App: React.FC = () => {
   //Add a folder
   const handleAddFolder = (e: FormEvent) => {
     e.preventDefault();
-    fetch("http://localhost:5000/api/folders", {
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/folders`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({name: newFolder}),
@@ -85,7 +85,7 @@ const App: React.FC = () => {
   const handleAdd = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if(!selectedFolder) return;
-    fetch('http://localhost:5000/api/flashcards', {
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/flashcards`, {
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, answer, folder: selectedFolder, }),
@@ -107,7 +107,7 @@ const App: React.FC = () => {
   const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingId) return;
-    fetch(`http://localhost:5000/api/flashcards/${editingId}`, {
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/flashcards/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: editQuestion, answer: editAnswer }),
@@ -134,7 +134,7 @@ const App: React.FC = () => {
   const handleRenameFolder = (e: FormEvent) => {
     e.preventDefault();
     if (!renamingFolderId) return;
-    fetch(`http://localhost:5000/api/folders/${renamingFolderId}`, {
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/folders/${renamingFolderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newFolderName })
@@ -149,14 +149,14 @@ const App: React.FC = () => {
 
   // Delete a flashcard
   const handleDelete = (id: string) => {
-    fetch(`http://localhost:5000/api/flashcards/${id}`, { method: 'DELETE' })
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/flashcards/${id}`, { method: 'DELETE' })
       .then(() => setFlashcards(flashcards.filter(card => card._id !== id)));
   };
 
   //Delete a folder
   const handleDeleteFolder = (id: string) => {
     if (!window.confirm("Are you sure? This will delete the folder and all its flashcards.")) return;
-    fetch(`http://localhost:5000/api/folders/${id}`, { method: "DELETE" })
+    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/folders/${id}`, { method: "DELETE" })
       .then(res => res.json())
       .then(() => {
         setFolders(folders.filter(f => f._id !== id));

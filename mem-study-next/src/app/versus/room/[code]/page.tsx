@@ -25,9 +25,8 @@ export default function RoomPage() {
 
     function onState(rs: RoomState) {
       setState(rs);
-      const base = "http://localhost:5000";
       if (rs.folderId) {
-        fetch(`${base}/api/flashcards?folderId=${rs.folderId}`)
+        fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/flashcards?folderId=${rs.folderId}`)
           .then((r) => r.json())
           .then((data) => Array.isArray(data) && setCards(data))
           .catch(console.error);

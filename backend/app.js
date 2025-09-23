@@ -151,14 +151,13 @@ if (!MONGO_URL) {
   process.exit(1);
 }
 
-mongoose
-  .connect(MONGO_URL, { serverSelectionTimeoutMS: 8000 })
-  .then(() => console.log("Mongo connected"))
-  .catch((err) => {
-    console.error("Mongo connection error:", err?.message || err);
-    // process.exit(1); // optional: fail hard if you prefer
-  });
-
+if(process.env.NODE_ENV !== 'test'){
+    mongoose
+    .connect(MONGO_URL, { serverSelectionTimeoutMS: 8000 })
+    .then(() => console.log("Mongo connected"))
+    .catch((err) => {
+        console.error("Mongo connection error:", err?.message || err);});
+}
 // --- HTTP + Socket.IO
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -170,17 +169,22 @@ const io = new Server(server, {
   transports: ["websocket", "polling"],
 });
 
-// mount your socket logic
+
 attachVersus(io);
 
 // --- Start
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+if(process.env.NODE_ENV !== 'test'){
+    server.listen(PORT, () => {
+        console.log(`Server listening on port ${PORT}`);
+    });
+}
+
 
 // graceful shutdown
 process.on("SIGINT", async () => {
   await mongoose.connection.close();
   server.close(() => process.exit(0));
 });
+
+module.exports = {app, server};

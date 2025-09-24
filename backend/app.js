@@ -146,7 +146,7 @@ app.delete("/api/flashcards/:id", async (req, res) => {
 
 // --- DB
 const MONGO_URL = process.env.MONGO_URL;
-if (!MONGO_URL && !isTest) {
+if (!MONGO_URL && process.env.NODE_ENV !== 'test' ) {
   console.error("MONGO_URL is missing");
   process.exit(1);
 }

@@ -26,7 +26,7 @@ const allowed = (process.env.CORS_ORIGIN || "")
 // CORS middleware: allow listed origins AND no-origin requests (curl/health)
 app.use(
   cors({
-    origin: (origin, cb) => {
+    origin: (originthisshoulldfail, cb) => {
       if (!origin) return cb(null, true); // server-to-server / curl / health checks
       return cb(null, allowed.includes(origin));
     },

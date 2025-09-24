@@ -16,7 +16,8 @@ const attachVersus = require("./sockets/versus");
 const app = express();
 app.use(express.json());
 
-// Build allowed origins list from env (comma-separated)
+// Build allowed origins list from env
+// kojo
 const allowed = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map(s => s.trim())

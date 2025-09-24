@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "cross-env NODE_ENV=test jest --runInBand",
-    "test:ci": "cross-env NODE_ENV=test jest --ci --runInBand --reporters=default --reporters=jest-junit",
+    "test": "NODE_ENV=test jest --runInBand",
+    "test:ci": "NODE_ENV=test jest --ci --runInBand --reporters=default --reporters=jest-junit",
     "start": "node app.js"
   },
   "jest": { "testEnvironment": "node" },

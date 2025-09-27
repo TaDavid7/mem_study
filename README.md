@@ -39,7 +39,7 @@ Open the app on http://localhost:3000 and it should be running
 For any changes make to the backend, stop the frontend instance and the backend and rerun. Or if preferred, install nodemon if you want automatic refreshes.
 
 --- 
-#Future improvements
+# Future improvements
 - User authentication
 - Import/export flashcard sets
 - Use machine learning algorithms for spaced repetition as a study mode
@@ -51,3 +51,4 @@ Perfect for expanding/testing your own studying purposes
 
 ## License
 Licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+

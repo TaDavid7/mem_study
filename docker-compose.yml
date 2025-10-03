@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  backend:
+    build: ./backend
+    container_name: flashcards-backend
+    ports:
+      - "4000:4000"
+    environment:
+      MONGO_URL: "mongodb+srv://new_user_3:tanioka7861@flashcards.nkagg8c.mongodb.net/?retryWrites=true&w=majority&appName=flashcards"
+      CORS_ORIGIN: "http://localhost:3000"
+    networks: [appnet]
+
+  frontend:
+    build:
+      context: ./mem-study-next
+      args:
+        NEXT_PUBLIC_SOCKET_URL: "${NEXT_PUBLIC_SOCKET_URL:-http://localhost:4000}"
+    container_name: mem-study-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge

@@ -10,6 +10,9 @@ Currently the backend of the app is deployed on AWS EC2 and the frontend on Verc
 Test it here
 cardsapp.org
 
+Look at this for API documentation
+https://cardsapp.org/api-docs/
+
 ### Clone the repository
 
 ``` bash
@@ -64,6 +67,7 @@ Perfect for expanding/testing your own studying purposes
 
 ## License
 Licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+
 
 
 

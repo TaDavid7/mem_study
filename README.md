@@ -7,6 +7,8 @@ Currently the backend of the app is deployed on AWS EC2 and the frontend on Verc
 ---
 
 # Setup
+Test it here
+cardsapp.org
 
 ### Clone the repository
 
@@ -62,6 +64,7 @@ Perfect for expanding/testing your own studying purposes
 
 ## License
 Licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+
 
 
 

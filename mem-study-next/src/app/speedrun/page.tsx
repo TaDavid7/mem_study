@@ -28,7 +28,7 @@ export default function QuizPage() {
 
   //load folders
   useEffect( () => {
-      fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/folders`)
+      fetch(`/api/folders`)
         .then(res => res.json())
         .then((folders: Folder[]) => setFolders(folders));
     }, []);
@@ -41,7 +41,7 @@ export default function QuizPage() {
       return;
     }
     setLoading(true);
-    fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/api/flashcards?folderId=${selectedFolder}`)
+    fetch(`/api/flashcards?folderId=${selectedFolder}`)
       .then(res => res.json())
       .then((cards: FlashcardType[]) => {
         setFlashcards(cards);

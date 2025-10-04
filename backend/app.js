@@ -6,6 +6,9 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/swagger');
+
 const Folder = require("./models/Folder");
 const Flashcard = require("./models/Flashcard");
 const attachVersus = require("./sockets/versus");
@@ -34,13 +37,73 @@ app.use(
   })
 );
 
-// Friendly root + health endpoints
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+
+/**
+ * @swagger
+ * /:
+ *  get:
+ *      summary: Root ping
+ *      description: Simple response to see if API is up
+ *      tags: [Health]
+ *      responses:
+ *          200:
+ *            description: Plain text OK
+ *            content:
+ *              text/plain:
+ *                schema:
+ *                  type: string
+ *                   example: API OK
+ */
 app.get("/", (_req, res) => res.status(200).send("API OK"));
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Returns service health and process uptime (seconds).
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 uptime:
+ *                   type: number
+ *                   description: Seconds the process has been up
+ *                   example: 12.345
+ */
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, uptime: process.uptime() })
 );
 
-// --- Folders
+/**
+ * @swagger
+ * /api/folders:
+ *   get:
+ *     summary: List folders
+ *     description: Returns all folders sorted by name ascending.
+ *     tags: [Folders]
+ *     responses:
+ *       200:
+ *         description: Array of folders
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Folder'
+ *       500:
+ *         description: Server error
+ */
 app.get("/api/folders", async (_req, res) => {
   try {
     const folders = await Folder.find({}).sort({ name: 1 }).lean();
@@ -50,6 +113,55 @@ app.get("/api/folders", async (_req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders:
+ *   post:
+ *     summary: Create a folder
+ *     tags: [Folders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *           example:
+ *             name: "Biology"
+ *     responses:
+ *       201:
+ *         description: Created folder
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Folder'
+ *       400:
+ *         description: Missing required field(s)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *               example:
+ *                 error: "name is required"
+ *       409:
+ *         description: Folder already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *               example:
+ *                 error: "folder exists"
+ *       500:
+ *         description: Server error
+ */
 app.post("/api/folders", async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
@@ -62,6 +174,45 @@ app.post("/api/folders", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders/{id}:
+ *   patch:
+ *     summary: Rename a folder
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Folder ID (Mongo ObjectId)
+ *         schema:
+ *           type: string
+ *           example: "66f1b2a3c4d5e6f7890a1b2c"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *           example:
+ *             name: "Biology A1"
+ *     responses:
+ *       200:
+ *         description: Updated folder
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Folder'
+ *       400:
+ *         description: Missing required field(s)
+ *       404:
+ *         description: Folder not found
+ *       500:
+ *         description: Server error
+ */
 app.patch("/api/folders/:id", async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
@@ -78,6 +229,36 @@ app.patch("/api/folders/:id", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders/{id}:
+ *   delete:
+ *     summary: Delete a folder and its flashcards
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Folder ID (Mongo ObjectId)
+ *         schema:
+ *           type: string
+ *           example: "66f1b2a3c4d5e6f7890a1b2c"
+ *     responses:
+ *       200:
+ *         description: Deletion acknowledged
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *       404:
+ *         description: Folder not found
+ *       500:
+ *         description: Server error
+ */
 app.delete("/api/folders/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -90,7 +271,33 @@ app.delete("/api/folders/:id", async (req, res) => {
   }
 });
 
-// --- Flashcards
+/**
+ * @swagger
+ * /api/flashcards:
+ *   get:
+ *     summary: List flashcards
+ *     description: Optionally filter by folder using the `folderId` query parameter.
+ *     tags: [Flashcards]
+ *     parameters:
+ *       - in: query
+ *         name: folderId
+ *         required: false
+ *         description: Filter by folder ID (Mongo ObjectId)
+ *         schema:
+ *           type: string
+ *           example: "66f1b2a3c4d5e6f7890a1b2c"
+ *     responses:
+ *       200:
+ *         description: Array of flashcards
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Flashcard'
+ *       500:
+ *         description: Server error
+ */
 app.get("/api/flashcards", async (req, res) => {
   try {
     const q = {};
@@ -102,6 +309,51 @@ app.get("/api/flashcards", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/flashcards:
+ *   post:
+ *     summary: Create a flashcard
+ *     tags: [Flashcards]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               question:
+ *                 type: string
+ *               answer:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *                 description: Folder ID (Mongo ObjectId)
+ *           example:
+ *             question: "What is ATP?"
+ *             answer: "Energy currency of the cell"
+ *             folder: "66f1b2a3c4d5e6f7890a1b2c"
+ *     responses:
+ *       201:
+ *         description: Created flashcard
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Flashcard'
+ *       400:
+ *         description: Missing required field(s)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *               example:
+ *                 error: "question, answer, folder required"
+ *       500:
+ *         description: Server error
+ */
 app.post("/api/flashcards", async (req, res) => {
   try {
     const { question, answer, folder } = req.body || {};
@@ -116,6 +368,49 @@ app.post("/api/flashcards", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/flashcards/{id}:
+ *   patch:
+ *     summary: Update a flashcard (partial)
+ *     tags: [Flashcards]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Flashcard ID (Mongo ObjectId)
+ *         schema:
+ *           type: string
+ *           example: "66f1b2a3c4d5e6f7890a1b2c"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Any subset of fields to update
+ *             properties:
+ *               question:
+ *                 type: string
+ *               answer:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *                 description: Folder ID (Mongo ObjectId)
+ *           example:
+ *             answer: "Updated answer"
+ *     responses:
+ *       200:
+ *         description: Updated flashcard
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Flashcard'
+ *       404:
+ *         description: Flashcard not found
+ *       500:
+ *         description: Server error
+ */
 app.patch("/api/flashcards/:id", async (req, res) => {
   try {
     const { question, answer, folder } = req.body || {};
@@ -135,6 +430,36 @@ app.patch("/api/flashcards/:id", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/flashcards/{id}:
+ *   delete:
+ *     summary: Delete a flashcard
+ *     tags: [Flashcards]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Flashcard ID (Mongo ObjectId)
+ *         schema:
+ *           type: string
+ *           example: "66f1b2a3c4d5e6f7890a1b2c"
+ *     responses:
+ *       200:
+ *         description: Deletion acknowledged
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *       404:
+ *         description: Flashcard not found
+ *       500:
+ *         description: Server error
+ */
 app.delete("/api/flashcards/:id", async (req, res) => {
   try {
     const del = await Flashcard.findByIdAndDelete(req.params.id);

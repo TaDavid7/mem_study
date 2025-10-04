@@ -41,11 +41,14 @@ npm run dev
 Open the app on http://localhost:3000 and it should be running
 
 For any changes make to the backend, stop the frontend instance and the backend and rerun. Or if preferred, install nodemon if you want automatic refreshes.
+
 ---
 
 ### Testing app
+
 To use the app, first create a folder named whatever you want and then create a card with a specified question and answer with the folder selected.
 Congrats you have your first folder and flashcard. Create more flashcards if you want to check out other modes.
+
 --- 
 # Future improvements
 - User authentication
@@ -59,6 +62,7 @@ Perfect for expanding/testing your own studying purposes
 
 ## License
 Licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+
 
 
 

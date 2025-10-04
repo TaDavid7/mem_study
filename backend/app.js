@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./src/swagger');
+const swaggerSpec = require('./swagger');
 
 const Folder = require("./models/Folder");
 const Flashcard = require("./models/Flashcard");

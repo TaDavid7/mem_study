@@ -14,7 +14,7 @@ const Flashcard = require("./models/Flashcard");
 const attachVersus = require("./sockets/versus");
 
 
-//check
+//chec
 // --- Express
 const app = express();
 app.use(express.json());

@@ -61,46 +61,72 @@ export default function QuizPage() {
   return (
     <div>
       {!gameReady ? (
-        <div className = "border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 max-w-5xl mx-auto">
-          <div className="p-6 space-y-6">
-            <h1 className="text-3xl text-left font-bold">Speedrun</h1>
-            <div className = "text-lg text-left font-medium">A fast-paced game where you try to answer as many questions as possible. 
-              Each card presents a question, and you type in your answer before moving to the next one. 
-              The deck randomizes and recycles.</div> <br></br>
-            <label className="text-lg font-medium">Select Folder: </label>
-            <>
-              <select
-                value={selectedFolder}
-                onChange={e => setSelectedFolder(e.target.value)}
-                className="p-2 rounded-2xl bg-gray-200 text-gray-600"
-                style={{ minWidth: "180px" }}
-              >
-                <option value="">-- Select --</option>
-                {folders.map(folder => (
-                  <option key={folder._id} value={folder._id}>{folder.name}</option>
-                ))}
-              </select> <br></br><br></br>
-            </>
-                <input
+        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
+            
+            {/* Hero */}
+            <div className="mb-8">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Speedrun</h1>
+              <p className="mt-2 text-slate-600">A fast-paced game where you try to answer as many questions as possible. 
+                Each card presents a question, and you type in your answer before moving to the next one. 
+                The deck randomizes and recycles.</p>
+            </div>
+
+            <div className="rounded-2xl shadow-md bg-white ring-1 ring-black/5 p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Select Folder </label>
+                    <>
+                      <select
+                        value={selectedFolder}
+                        onChange={e => setSelectedFolder(e.target.value)}
+                        className="w-full sm:w-64
+                                    rounded-xl border border-gray-300
+                                    bg-gray-50 text-gray-700
+                                    px-3 py-2
+                                    focus:border-blue-500 focus:ring-2 focus:ring-blue-500
+                                    outline-none
+                                    appearance-none"
+                      >
+                      <option value="">-- Select --</option>
+                      {folders.map(folder => (
+                        <option key={folder._id} value={folder._id}>{folder.name}</option>
+                      ))}
+                      </select> 
+                    </>
+                  </div>
+                  
+                </div>
+              </div>
+
+              {/* Input time value */}
+              <div>
+                <input 
                   value={time}
                   onChange={e => setTime(e.target.value)}
                   placeholder="Type time in seconds"
-                  className="w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
-                        text-m bg-gray-50 outline-none transition duration-300
-                        focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
-              autoFocus
-            /> <br></br> 
-            
-              <button
-                className = "bg-blue-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" 
-                disabled = {!selectedFolder || !time}
-                onClick={() => {setGameReady(true)}} style={{ marginTop: "1rem" }}> Start
-              </button> &nbsp; &nbsp;
+                  className="mt-6 flex flex-col sm:flex-row gap-2 w-50 px-3 py-1 border-2 border-gray-300 rounded-lg 
+                    text-m bg-gray-50 outline-none transition duration-300
+                    focus:border-blue-500 focus:shadow-md placeholder-gray-400 italic"
+                    autoFocus
+                /> 
+              </div>
+              
+              {/* Buttons */}
+              <div>
+                <button
+                  className = "bg-blue-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" 
+                  disabled = {!selectedFolder || !time}
+                  onClick={() => {setGameReady(true)}} style={{ marginTop: "1rem" }}> Start
+                </button> &nbsp; &nbsp;
 
-              <button
-                className = "bg-red-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-red-600 transition" 
-                onClick={exitingQuizGame} style={{ marginTop: "1rem" }}> Exit
-              </button>
+                <button
+                  className = "bg-red-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-red-600 transition" 
+                  onClick={exitingQuizGame} style={{ marginTop: "1rem" }}> Exit
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ): 
@@ -109,7 +135,6 @@ export default function QuizPage() {
           time = {time}
           onQuit={exitingQuizGame}
         />)}
-
     </div>
   );
 }

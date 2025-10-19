@@ -42,29 +42,35 @@ function serialize(room) {
 
 module.exports = function attachVersus(io) {
   io.on("connection", (socket) => {
-    // Create a room with a chosen folder. The creator becomes host.
-    socket.on("createRoom", async ({ folderId, username }) => {
-      const code = createCode();
-      const room = {
-        code,
-        hostId: socket.id,
-        folderId: folderId || null,
-        started: false,
-        currentIndex: 0,
-        deck: [],
-        players: new Map(),
-      };
-      rooms.set(code, room);
+    socket.on("createRoom", async ({ folderId, username }, check) => {
+      try{
+        const code = createCode();
+        const room = {
+          code,
+          hostId: socket.id,
+          folderId: folderId || null,
+          started: false,
+          currentIndex: 0,
+          deck: [],
+          players: new Map(),
+        };
+        rooms.set(code, room);
 
-      socket.join(code);
-      room.players.set(socket.id, {
-        socketId: socket.id,
-        username: username || "Host",
-        score: 0,
-        lastScoredIndex: -1,
-      });
+        socket.join(code);
+        room.players.set(socket.id, {
+          socketId: socket.id,
+          username: username || "Host",
+          score: 0,
+          lastScoredIndex: -1,
+        });
 
-      io.to(code).emit("roomState", serialize(room));
+        io.to(code).emit("roomState", serialize(room));
+
+        check?.({ok: true, code});
+
+      } catch (e){
+        check?.({ok: false, error: e.message || "createRoom failed"});
+      }
     });
 
     // Join an existing room and receive the latest state
@@ -122,23 +128,42 @@ module.exports = function attachVersus(io) {
       const correct = g && g === current.answerNorm;
 
       if (correct) {
-        // Prevent multiple scores by the same player on the same index
         if (player.lastScoredIndex !== room.currentIndex) {
           player.score += 1;
           player.lastScoredIndex = room.currentIndex;
-          io.to(code).emit("roomState", serialize(room));
         }
         io.to(socket.id).emit("guessResult", { correct: true });
-      } else {
+        io.to(code).emit("roomState", serialize(room));
+        const isLast = room.currentIndex >= room.deck.length - 1;
+        if (isLast) {
+          // prevent any further client-driven advance from racing
+          room.started = false;
+          io.to(code).emit("results", serialize(room));
+        }
+        } else {
         io.to(socket.id).emit("guessResult", { correct: false });
       }
     });
 
-    // Advance to the next question (host-controlled by default)
+    socket.on("correctmove", ({code}) => {
+      code = String(code || "").toUpperCase();
+      const room = rooms.get(code);
+      if (!room || !room.started) return;
+      if (room.currentIndex < Math.max(0, room.deck.length - 1)) {
+        room.currentIndex += 1;
+        io.to(code).emit("roomState", serialize(room));
+      }
+      else{
+        io.to(code).emit("results", serialize(room));
+      }
+    });
+
+    // Advance to the next question
     socket.on("nextQuestion", ({ code }) => {
       code = String(code || "").toUpperCase();
       const room = rooms.get(code);
       if (!room || !room.started) return;
+      if (room.hostId !== socket.id) return;
       if (room.currentIndex < Math.max(0, room.deck.length - 1)) {
         room.currentIndex += 1;
         io.to(code).emit("roomState", serialize(room));

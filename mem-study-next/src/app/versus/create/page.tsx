@@ -23,11 +23,28 @@ export default function CreateRoomPage() {
     const name = username.trim();
     if (!folderId || !name) return;
 
+    const socket = getSocket();
     setLoading(true);
     setError(null);
 
-    const socket = getSocket();
-    socket.emit("createRoom", { folderId, username: name });
+    //safety timer
+    const t = setTimeout(() => {
+      setLoading(false);
+      setError("Creating room timed out.");
+    }, 10000);
+
+    socket.emit("createRoom", 
+      { folderId, username: name },
+      (resp: { ok: boolean; code?: string; error?: string }) => {
+        clearTimeout(t);
+        if (!resp?.ok || !resp.code) {
+          setLoading(false);
+          setError(resp?.error || "Failed to create room");
+          return;
+        }
+        router.push(`/versus/room/${resp.code}?me=${encodeURIComponent(username.trim())}`);
+      }
+    );
 
     const onRoomState = (rs: RoomState) => {
       if (rs.code) {

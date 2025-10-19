@@ -1,38 +1,57 @@
-'use client';
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import React from "react";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-
-const tabs = [
-  { id: 'home', label: 'Home', href: '/home' },
-  { id: 'speedrun', label: 'Speedrun', href: '/speedrun'},
-  { id: 'versus', label: 'Versus', href: '/versus'},
+const navItems = [
+  { href: "/", label: "Home" },
+  { href: "/speedrun", label: "Speedrun" },
+  { href: "/versus", label: "Versus" },
 ];
 
-export default function TabNavigation() {
+export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-
   return (
-    <ul role="tablist" className="flex space-x-2 border-b border-gray-300 p-2">
-      {tabs.map((tab) => {
-        const isActive = pathname === tab.href;
-        return (
-          <li key={tab.id}>
-            <Link
-              href={tab.href}
-              role="tab"
-              aria-selected={isActive}
-              className={`inline-block p-4 text-gray-400 bg-gray-100 rounded-md bg-transparent hover:bg-gray-200 ${
-                isActive
-                  ? 'border-b border-indigo-500 rounded-none text-indigo-500'
-                  : ''
-              }`}
-            >
-              {tab.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      {/* Top Nav */}
+      <header className="sticky top-0 z-40 bg-white/70 backdrop-blur border-b border-black/5">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-lg bg-indigo-600" />
+            <span className="font-semibold tracking-tight">Mem Study</span>
+          </Link>
+
+          <nav className="flex items-center gap-1">
+            {navItems.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={[
+                    "px-3 py-1.5 rounded-xl text-sm transition",
+                    active
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:bg-slate-100",
+                  ].join(" ")}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {/* Page content */}
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
+        {children}
+      </main>
+
+      {/* Footer */}
+      <footer className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-slate-600">
+        © {new Date().getFullYear()} Mem Study
+      </footer>
+    </div>
   );
 }

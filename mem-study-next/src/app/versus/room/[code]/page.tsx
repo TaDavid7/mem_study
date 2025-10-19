@@ -33,8 +33,10 @@ export default function RoomPage() {
       }
     }
     
+
     async function onReveal(payload: {index: number}){
       if(state && payload.index !== state.currentIndex ) return;
+      setAnswered(true);
       setRevealed(true);
       await new Promise(resolve => setTimeout(resolve, 500));
       nextQuestion();
@@ -42,9 +44,10 @@ export default function RoomPage() {
     async function onGuessResult(payload: { correct: boolean }) {
       if (payload.correct) {
         setAnswered(true);
+        setRevealed(true);
         setFeedback("correct");
         await new Promise(resolve => setTimeout(resolve, 500));
-        nextQuestion();
+        correctMove();
       } else {
         setFeedback("wrong");
       }
@@ -91,6 +94,9 @@ export default function RoomPage() {
   }
   function nextQuestion() {
     socketRef.current.emit("nextQuestion", { code: String(code).toUpperCase() });
+  }
+  function correctMove(){
+    socketRef.current.emit("correctmove", {code: String(code).toUpperCase() });
   }
 
   function stuck(){

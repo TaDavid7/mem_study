@@ -365,7 +365,13 @@ const App: React.FC = () => {
         <div className="mt-10">
           {flashcards.length > 0 ? (
             <div className="relative w-full max-w-3xl mx-auto">
-              <Flashcard card={flashcards[cardindex]} onDelete={handleDelete} onEdit={handleEditStart} />
+              <div key={flashcards[cardindex]?._id}>
+                <Flashcard
+                  card={flashcards[cardindex]}
+                  onDelete={handleDelete}
+                  onEdit={handleEditStart}
+                />
+              </div>
 
               {/* Prev */}
               <button

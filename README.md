@@ -2,7 +2,7 @@
 
 A full-stack flashcard learning platform built with Next.js, React, Express, and MongoDB.
 This app lets users create, organize, and study flashcards grouped into folders. It includes a speedrun and multiplayer mode, using Socket.io for real-time gameplay across multiple players
-Currently the backend of the app is deployed on AWS EC2 and the frontend on Vercel. The backend currently has a CI/CD pipeline where any git commits automatically update the render of the app.
+Currently deployed on AWS EC2 with a NGINX to custom domain cardsapp.
 
 ---
 
@@ -67,6 +67,7 @@ Perfect for expanding/testing your own studying purposes
 
 ## License
 Licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+
 
 
 

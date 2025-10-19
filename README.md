@@ -37,6 +37,8 @@ PORT = CHOOSE_PORT <br>
 
 
 ### Frontend setup
+In frontend setup(mem-study-next), create your own env.local and set <br>
+NEXT_PUBLIC_API_BASE=http://localhost:5000 (or wherever your backend is
 ```bash
 cd ../frontend
 npm install
@@ -67,6 +69,7 @@ Perfect for expanding/testing your own studying purposes
 
 ## License
 Licensed under the Apache License 2.0 – see the [LICENSE](LICENSE) file for details.
+
 
 
 

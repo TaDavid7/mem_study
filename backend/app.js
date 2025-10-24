@@ -13,6 +13,10 @@ const Folder = require("./models/Folder");
 const Flashcard = require("./models/Flashcard");
 const attachVersus = require("./sockets/versus");
 
+const jwt = require("jsonwebtoken");
+const User = require("./models/User");
+
+const auth = require("./middleware/auth");
 
 //chec
 // --- Express
@@ -37,6 +41,7 @@ app.use(
   })
 );
 
+//swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
@@ -81,7 +86,7 @@ app.get("/", (_req, res) => res.status(200).send("API OK"));
  *                   description: Seconds the process has been up
  *                   example: 12.345
  */
-app.get("/health", (_req, res) =>
+app.get("/health", auth, (_req, res) =>
   res.status(200).json({ ok: true, uptime: process.uptime() })
 );
 
@@ -104,9 +109,9 @@ app.get("/health", (_req, res) =>
  *       500:
  *         description: Server error
  */
-app.get("/api/folders", async (_req, res) => {
+app.get("/api/folders", auth, async (req, res) => {
   try {
-    const folders = await Folder.find({}).sort({ name: 1 }).lean();
+    const folders = await Folder.find({user: req.user._id}).sort({ name: 1 }).lean();
     res.json(folders);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -162,18 +167,58 @@ app.get("/api/folders", async (_req, res) => {
  *       500:
  *         description: Server error
  */
-app.post("/api/folders", async (req, res) => {
+app.post("/api/folders", auth, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     if (!name) return res.status(400).json({ error: "name is required" });
-    const folder = await Folder.create({ name });
-    res.status(201).json(folder);
+    const folder = await Folder.create({ name, user: req.user._id }); // {name} same as {name: name}
+    res.status(201).json(folder); //returns folder
   } catch (e) {
     if (e.code === 11000) return res.status(409).json({ error: "folder exists" });
     res.status(500).json({ error: e.message });
   }
 });
 
+app.post("/api/register", async(req, res) => {
+  try{
+    const{username, password} = req.body;
+    if(!username?.trim() || !password?.trim()){
+      return res.status(400).json({error:"Username and password required"});
+    }
+
+    const exists = await User.findOne({username});
+    if(exists){
+      return res.status(409).json({error:"Username exists already"});
+    }
+
+    const user = new User({username, password});
+    await user.save();
+
+    const token = jwt.sign({userId: user._id}, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    res.status(201).json({token, username: user.username});
+  } catch(err){
+    res.status(500).json({error: "Server error: " + err.message})
+  }
+});
+
+app.post("/api/login", async(req, res) => {
+  try{
+    const {username, password} = req.body;
+    const user = await User.findOne({username});
+    if(!user || !(await user.comparePassword(password))){
+      return res.status(401).json({error: "invalid credentials"});
+    }
+
+    const token = jwt.sign({userId: user._id}, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    res.json({token, username: user.username});
+  } catch(err){
+    res.status(500).json({error: "Server error"});
+  }
+});
 /**
  * @swagger
  * /api/folders/{id}:
@@ -213,14 +258,14 @@ app.post("/api/folders", async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.patch("/api/folders/:id", async (req, res) => {
+app.patch("/api/folders/:id", auth, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     if (!name) return res.status(400).json({ error: "name is required" });
     const updated = await Folder.findByIdAndUpdate(
-      req.params.id,
-      { name },
-      { new: true }
+      {_id: req.params.id, user: req.user._id}, //finds by id
+      { name }, //updates name {name: name}
+      { new: true }   //returns new folder instead of old one
     );
     if (!updated) return res.status(404).json({ error: "not found" });
     res.json(updated);
@@ -259,11 +304,11 @@ app.patch("/api/folders/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.delete("/api/folders/:id", async (req, res) => {
+app.delete("/api/folders/:id", auth, async (req, res) => {
   try {
     const { id } = req.params;
-    await Flashcard.deleteMany({ folder: id });
-    const del = await Folder.findByIdAndDelete(id);
+    await Flashcard.deleteMany({ folder: id, user: req.user._id});
+    const del = await Folder.findByIdAndDelete({_id: id, user: req.user._id});
     if (!del) return res.status(404).json({ error: "not found" });
     res.json({ ok: true });
   } catch (e) {
@@ -298,10 +343,11 @@ app.delete("/api/folders/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.get("/api/flashcards", async (req, res) => {
+app.get("/api/flashcards", auth, async (req, res) => {
   try {
     const q = {};
     if (req.query.folderId) q.folder = req.query.folderId;
+    q.user = req.user._id;
     const cards = await Flashcard.find(q).sort({ _id: 1 }).lean();
     res.json(cards);
   } catch (e) {
@@ -354,14 +400,14 @@ app.get("/api/flashcards", async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.post("/api/flashcards", async (req, res) => {
+app.post("/api/flashcards", auth, async (req, res) => {
   try {
     const { question, answer, folder } = req.body || {};
     if (!question || !answer || !folder)
       return res
         .status(400)
         .json({ error: "question, answer, folder required" });
-    const card = await Flashcard.create({ question, answer, folder });
+    const card = await Flashcard.create({ question, answer, folder, user: req.user._id });
     res.status(201).json(card);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -411,11 +457,11 @@ app.post("/api/flashcards", async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.patch("/api/flashcards/:id", async (req, res) => {
+app.patch("/api/flashcards/:id", auth, async (req, res) => {
   try {
     const { question, answer, folder } = req.body || {};
     const card = await Flashcard.findByIdAndUpdate(
-      req.params.id,
+      {_id: req.params.id, user: req.user._id},
       {
         ...(question && { question }),
         ...(answer && { answer }),
@@ -460,9 +506,9 @@ app.patch("/api/flashcards/:id", async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.delete("/api/flashcards/:id", async (req, res) => {
+app.delete("/api/flashcards/:id", auth, async (req, res) => {
   try {
-    const del = await Flashcard.findByIdAndDelete(req.params.id);
+    const del = await Flashcard.findByIdAndDelete({_id: req.params.id, user: req.user._id});
     if (!del) return res.status(404).json({ error: "not found" });
     res.json({ ok: true });
   } catch (e) {
@@ -493,6 +539,22 @@ const io = new Server(server, {
     credentials: true,
   },
   transports: ["websocket", "polling"],
+});
+
+io.use((socket, next) => {
+  try {
+    // Prefer auth field from client
+    const token =
+      socket.handshake.auth?.token ||
+      (socket.handshake.headers?.authorization || "").replace(/^Bearer\s+/i, "");
+    if (!token) return next(new Error("Unauthorized"));
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.data.userId = decoded.userId;
+    next();
+  } catch (e) {
+    next(new Error("Unauthorized"));
+  }
 });
 
 

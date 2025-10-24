@@ -7,6 +7,7 @@ const navItems = [
   { href: "/", label: "Home" },
   { href: "/speedrun", label: "Speedrun" },
   { href: "/versus", label: "Versus" },
+  { href: "/account", label: "Account"},
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

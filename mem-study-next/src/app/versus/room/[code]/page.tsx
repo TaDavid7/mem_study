@@ -1,201 +1,296 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, useParams } from "next/navigation";
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { getSocket } from "@/lib/socket";
-import type { RoomState, RoomPlayer } from "@/types/versus";
 
-export default function RoomPage() {
-  const { code } = useParams<{ code: string }>();
-  const meName = useSearchParams().get("me") ?? "";
+type Player = {
+  socketId: string;
+  username: string;
+  score: number;
+};
 
-  const [state, setState] = useState<RoomState | null>(null);
-  const [cards, setCards] = useState<{ _id: string; question: string; answer: string }[]>([]);
-  const [guess, setGuess] = useState("");
-  const [answered, setAnswered] = useState(false);
+type RoomStateWire = {
+  code: string;
+  hostId: string;
+  folderId: string | null;
+  started: boolean;
+  currentIndex: number;
+  players: Player[];
+  currentQuestion: { id: string; question: string } | null;
+};
+
+type GuessResult = { correct: boolean };
+type RevealPayload = { index: number; answer: string };
+type ResultsPayload = RoomStateWire;
+
+export default function VersusRoomPage() {
+  const params = useParams<{ code: string }>();
+  const router = useRouter();
+  const roomCode = String(params?.code || "").toUpperCase();
+
+  const [socketId, setSocketId] = useState<string>("");
+  const [room, setRoom] = useState<RoomStateWire | null>(null);
+
+  const [currentCard, setCurrentCard] = useState<{ id: string; question: string; answer: string } | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const [feedback, setFeedback] = useState<"idle" | "correct" | "wrong">("idle");
-  const [showResults, setShowResults] = useState(false);
-  const [finalState, setFinalState] = useState<RoomState | null>(null);
-  const socketRef = useRef(getSocket());
+  const [guess, setGuess] = useState("");
+  const [guessFeedback, setGuessFeedback] = useState<"idle" | "right" | "wrong">("idle");
+  const [finalResults, setFinalResults] = useState<ResultsPayload | null>(null);
+  const [joining, setJoining] = useState(true);
+
+  const socketRef = useRef<ReturnType<typeof getSocket> | null>(null);
+
+  const isHost = useMemo(() => (!!room && !!socketId && room.hostId === socketId), [room, socketId]);
+
+  const [versusName, setVersusName] = useState(
+    () => (typeof window !== "undefined" ? localStorage.getItem("versusName") || "" : "")
+  );
 
 
-  // Subscribe to room state and ensure we are joined
+  // helpers
+  const usernameFromStorage = () => (typeof window === "undefined" ? "Player" : localStorage.getItem("username") || "Player");
+  const tokenExists = () => (typeof window === "undefined" ? false : !!localStorage.getItem("token"));
+
+  // socket wiring
   useEffect(() => {
-    const socket = socketRef.current;
-
-    function onState(rs: RoomState) {
-      setState(rs);
-      if (rs.folderId) {
-        fetch(`/api/flashcards?folderId=${rs.folderId}`)
-          .then((r) => r.json())
-          .then((data) => Array.isArray(data) && setCards(data))
-          .catch(console.error);
-      }
+    if (!tokenExists()) {
+      router.push("/login");
+      return;
     }
-    
 
-    async function onReveal(payload: {index: number}){
-      if(state && payload.index !== state.currentIndex ) return;
-      setAnswered(true);
-      setRevealed(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      nextQuestion();
-    }
-    async function onGuessResult(payload: { correct: boolean }) {
-      if (payload.correct) {
-        setAnswered(true);
-        setRevealed(true);
-        setFeedback("correct");
-        await new Promise(resolve => setTimeout(resolve, 500));
-        correctMove();
+    const socket = getSocket();
+    socketRef.current = socket;
+
+    // keep our own socket id in state
+    const setNowIfConnected = () => {
+      if (socket.connected) setSocketId(socket.id || "");
+    };
+    setNowIfConnected();
+
+    const onConnect = () => setSocketId(socket.id || "");
+    const onDisconnect = () => setSocketId("");
+
+    const onConnectError = (err: any) => console.error("[socket] connect_error", err);
+
+    const onRoomState = (rs: RoomStateWire) => {
+      setRoom(rs);
+      setFinalResults(null);
+      if (rs.currentQuestion) {
+        setCurrentCard({ id: rs.currentQuestion.id, question: rs.currentQuestion.question, answer: "" });
       } else {
-        setFeedback("wrong");
+        setCurrentCard(null);
       }
-    }
+      setRevealed(false);
+      setGuess("");
+      setGuessFeedback("idle");
+    };
 
-    function onResult(rs: RoomState){
-      console.log("results payload:", rs);
-      setFinalState(rs);
-      setShowResults(true);
-    }
+    const onReveal = (payload: RevealPayload) => {
+      setRevealed(true);
+      setCurrentCard((c) => (c ? { ...c, answer: payload.answer } : c));
+    };
 
-    socket.emit("joinRoom", { code: String(code).toUpperCase(), username: meName });
-    socket.on("roomState", onState);
-    socket.on("guessResult", onGuessResult);
+    const onGuessResult = (gr: GuessResult) => setGuessFeedback(gr.correct ? "right" : "wrong");
+    const onResults = (payload: ResultsPayload) => setFinalResults(payload);
+
+    const onRoomClosed = () => {
+      alert("The host closed the room.");
+      router.push("/");
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
+    socket.on("roomState", onRoomState);
     socket.on("revealAnswer", onReveal);
-    socket.on("results", onResult);
+    socket.on("guessResult", onGuessResult);
+    socket.on("results", onResults);
+    socket.on("roomClosed", onRoomClosed);
+
+    // join once connected
+    const join = () => socket.emit("joinRoom", { code: roomCode, username: usernameFromStorage() });
+    if (socket.connected) {
+      join();
+      setJoining(false);
+    } else {
+      socket.once("connect", () => {
+        join();
+        setJoining(false);
+      });
+    }
 
     return () => {
-      socket.off("roomState", onState);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.off("roomState", onRoomState);
+      socket.off("revealAnswer", onReveal);
       socket.off("guessResult", onGuessResult);
-      socket.off("revealAnswer", onReveal)
-      socket.off("results", onResult);
+      socket.off("results", onResults);
+      socket.off("roomClosed", onRoomClosed);
     };
-  }, [code, meName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomCode]);
 
-  // Reset per-question UI when index changes
-  useEffect(() => {
-    setGuess("");
-    setAnswered(false);
-    setRevealed(false);
-    setFeedback("idle");
-  }, [state?.currentIndex]);
+  // host actions
+  const startGame = () => socketRef.current?.emit("startGame", { code: roomCode });
+  const nextQuestion = () => socketRef.current?.emit("nextQuestion", { code: roomCode });
+  const revealAnswer = () => socketRef.current?.emit("revealAnswer", { code: roomCode });
+  const exitGame = () => socketRef.current?.emit("exitGame", { code: roomCode });
 
-  const meIsHost = state && state.hostId === socketRef.current.id;
-
-  const currentCard = useMemo(() => {
-    if (!state || !cards.length) return null;
-    const idx = Math.max(0, Math.min(state.currentIndex, cards.length - 1));
-    return cards[idx] ?? null;
-  }, [state, cards]);
-
-  function startGame() {
-    socketRef.current.emit("startGame", { code: String(code).toUpperCase() });
-  }
-  function nextQuestion() {
-    socketRef.current.emit("nextQuestion", { code: String(code).toUpperCase() });
-  }
-  function correctMove(){
-    socketRef.current.emit("correctmove", {code: String(code).toUpperCase() });
-  }
-
-  function stuck(){
-    socketRef.current.emit("revealAnswer", { code: String(code).toUpperCase() });
-  }
-
-  function submitGuess(e: React.FormEvent) {
+  // player action
+  const submitGuess = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentCard) return;
-    const g = guess.trim();
-    if (!g) return;
-    socketRef.current.emit("submitGuess", { code: String(code).toUpperCase(), guess: g });
-  }
+    if (!guess.trim()) return;
+    socketRef.current?.emit("submitGuess", { code: roomCode, guess });
+  };
 
-  const players = (state?.players ?? []).sort((a, b) => b.score - a.score);
+  const playersSorted = useMemo(
+    () => room?.players?.slice().sort((a, b) => b.score - a.score) ?? [],
+    [room]
+  );
+
+  const chip = (s: React.ReactNode) => (
+    <span className="inline-block rounded-full px-2 py-0.5 text-xs border">{s}</span>
+  );
 
   return (
-    <div>
-      {!showResults ? (<div className="mx-auto max-w-3xl p-6 space-y-6">
+    <div className="mx-auto max-w-3xl p-6 space-y-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Room {String(code).toUpperCase()}</h1>
-        <span className="text-sm opacity-70">{state?.started ? "In game" : "Lobby"}</span>
+        <div>
+          <h1 className="text-2xl font-semibold">Versus Room</h1>
+          <p className="text-sm text-gray-500">
+            Code: <strong>{roomCode}</strong>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {room?.started ? chip("In progress") : chip("Not started")}
+          {isHost ? chip("Host") : chip("Player")}
+        </div>
       </header>
 
-      <section className="rounded-2xl border p-4">
-        <div className="font-semibold mb-2">Players</div>
-        <ul className="grid grid-cols-2 gap-2">
-          {players.map((p: RoomPlayer) => (
-            <li key={p.socketId} className="rounded-xl border p-2 flex items-center justify-between">
-              <span>{p.username}</span>
-              <span className="text-sm opacity-70">{p.score}</span>
+      {/* players / scores */}
+      <section className="border rounded-xl p-4">
+        <h2 className="font-medium mb-3">Players</h2>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {playersSorted.map((p) => (
+            <li
+              key={p.socketId}
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+                p.socketId === room?.hostId ? "bg-gray-50" : ""
+              }`}
+            >
+              <span>
+                {p.username} {p.socketId === room?.hostId && chip("Host")}
+              </span>
+              <span className="font-semibold">{p.score}</span>
             </li>
           ))}
+          {!playersSorted.length && <li className="text-sm text-gray-500">Waiting for players…</li>}
         </ul>
       </section>
 
-      {!state?.started ? (
-        <section className="rounded-2xl border p-4 space-y-3">
-          <div>Folder: <strong>{state?.folderId ?? "(not set)"}</strong></div>
-          {meIsHost ? (
-            <button onClick={startGame} className="rounded-2xl px-4 py-2 shadow hover:shadow-md">Start game</button>
-          ) : (
-            <div className="text-sm opacity-70">Waiting for host to start…</div>
-          )}
-        </section>
-      ) : (
-        <section className="rounded-2xl border p-4 space-y-4">
-          <div className="text-sm opacity-70">Question {state.currentIndex + 1}</div>
-          <div className="text-xl font-semibold min-h-[80px] flex items-center">{currentCard?.question ?? "…"}</div>
+      {/* debug: who am i vs host */}
+      <p className="text-xs text-gray-500">me:{socketId || "—"} host:{room?.hostId || "—"}</p>
 
-          {/* Guess input */}
-          <form onSubmit={submitGuess} className="flex gap-2 items-center">
-            <input
-              className="border rounded p-2 flex-1"
-              placeholder="Type your answer and press Enter"
-              value={guess}
-              onChange={(e) => setGuess(e.target.value)}
-              disabled={!currentCard || answered}
-            />
-            <button
-              type="submit"
-              disabled={!currentCard || answered || !guess.trim()}
-              className="rounded-2xl px-4 py-2 shadow hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Submit
-            </button>
-          </form>
-
-          {/* Feedback + controls */}
-          <div className="text-sm">
-            {feedback === "correct" && <span className="text-green-700">Correct!</span>}
-            {feedback === "wrong" && <span className="text-red-700">Try again.</span>}
+      {/* main card */}
+      <section className="border rounded-2xl p-6">
+        {!room?.started && !finalResults && (
+          <div className="text-sm text-gray-600">
+            {isHost ? "Press Start when everyone has joined." : "Waiting for host to start the game…"}
           </div>
+        )}
 
-          <div className="flex gap-2 items-center">
-      
-            {meIsHost && (
-              <button onClick={stuck} className="rounded-2xl px-4 py-2 shadow hover:shadow-md">Everyone Stuck?</button>
+        {room?.started && currentCard && (
+          <div className="space-y-4">
+            <div className="text-xs uppercase tracking-wide text-gray-500">Question</div>
+            <div className="text-lg">{currentCard.question}</div>
+
+            <div className="mt-4">
+              {revealed ? (
+                <div className="rounded-lg bg-gray-50 border p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Answer</div>
+                  <div className="font-medium">{currentCard.answer || "—"}</div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Answer hidden</div>
+              )}
+            </div>
+
+            {/* guess box for players */}
+            {(
+              <form onSubmit={submitGuess} className="flex gap-2">
+                <input
+                  className="flex-1 rounded-lg border px-3 py-2"
+                  placeholder="Type your guess…"
+                  value={guess}
+                  onChange={(e) => {
+                    setGuess(e.target.value);
+                    setGuessFeedback("idle");
+                  }}
+                  disabled={revealed}
+                />
+                <button type="submit" className="rounded-lg border px-4 py-2" disabled={!guess.trim() || revealed}>
+                  Guess
+                </button>
+              </form>
+            )}
+
+            {/* feedback */}
+            {guessFeedback !== "idle" && !revealed && (
+              <div className={guessFeedback === "right" ? "text-green-600 text-sm" : "text-red-600 text-sm"}>
+                {guessFeedback === "right" ? "✅ Correct!" : "❌ Try again"}
+              </div>
+            )}
+
+            {/* host controls */}
+            {isHost && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button className="rounded-lg border px-4 py-2" onClick={revealAnswer} disabled={revealed}>
+                  Reveal
+                </button>
+                <button className="rounded-lg border px-4 py-2" onClick={nextQuestion}>
+                  Next
+                </button>
+              </div>
             )}
           </div>
+        )}
 
-          {revealed && (
-            <div className="text-base opacity-80">
-              <span className="opacity-70">Answer:</span> <strong>{currentCard?.answer}</strong>
-            </div>
-          )}
-        </section>
-      )}
-    </div>) : (
-      <div>
-        {players.map((p: RoomPlayer) => (
-            <li key={p.socketId} className="rounded-xl border p-2 flex items-center justify-between">
-              <span>{p.username}</span>
-              <span className="text-sm opacity-70">{p.score}</span>
-            </li>
-          ))}
-      </div>
-    )}
-    
-  </div>
+        {finalResults && (
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Results</h3>
+            <ul className="space-y-1">
+              {finalResults.players
+                .slice()
+                .sort((a, b) => b.score - a.score)
+                .map((p, i) => (
+                  <li key={p.socketId} className="flex justify-between border rounded-lg px-3 py-2">
+                    <span>
+                      {i + 1}. {p.username} {p.socketId === finalResults.hostId && chip("Host")}
+                    </span>
+                    <span className="font-semibold">{p.score}</span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {/* top-level host controls */}
+      <section className="flex flex-wrap gap-2">
+        {isHost && !room?.started && !finalResults && (
+          <button className="rounded-lg border px-4 py-2" onClick={startGame} disabled={joining}>
+            Start
+          </button>
+        )}
+        {isHost && (
+          <button className="rounded-lg border px-4 py-2" onClick={exitGame}>
+            Exit Room
+          </button>
+        )}
+      </section>
+    </div>
   );
 }

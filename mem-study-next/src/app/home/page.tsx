@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, FormEvent } from "react";
 import Flashcard from "@/components/Flashcard";
+import {authfetch} from "@/lib/authfetch";
 
 // Types
 type Card = {
@@ -41,9 +42,15 @@ const App: React.FC = () => {
 
   // Load folders
   useEffect(() => {
-    fetch(`/api/folders`)
+    authfetch(`/api/folders`)
       .then((res) => res.json())
-      .then((folders: Folder[]) => setFolders(folders));
+      .then((data) => {
+        if (!Array.isArray(data)) {
+          console.error("Invalid folders response:", data);
+          return;
+        }
+        setFolders(data);
+    });
   }, []);
 
   // Load flashcards when folder changes
@@ -53,7 +60,7 @@ const App: React.FC = () => {
       return;
     }
     setCardIndex(0);
-    fetch(`/api/flashcards?folderId=${selectedFolder}`)
+    authfetch(`/api/flashcards?folderId=${selectedFolder}`)
       .then((res) => res.json())
       .then((cards: Card[]) => setFlashcards(cards));
   }, [selectedFolder]);
@@ -61,7 +68,7 @@ const App: React.FC = () => {
   // Add a folder
   const handleAddFolder = (e: FormEvent) => {
     e.preventDefault();
-    fetch(`/api/folders`, {
+    authfetch(`/api/folders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newFolder }),
@@ -72,7 +79,11 @@ const App: React.FC = () => {
         return;
       }
       const folder: Folder = await res.json();
-      setFolders([...folders, folder]);
+      if(!Array.isArray(folders)){
+        setFolders([folder]);
+      } else{
+        setFolders([...folders, folder]);
+      }
       setNewFolder("");
     });
   };
@@ -81,7 +92,7 @@ const App: React.FC = () => {
   const handleAdd = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFolder) return;
-    fetch(`/api/flashcards`, {
+    authfetch(`/api/flashcards`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, answer, folder: selectedFolder }),
@@ -103,7 +114,7 @@ const App: React.FC = () => {
   const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingId) return;
-    fetch(`/api/flashcards/${editingId}`, {
+    authfetch(`/api/flashcards/${editingId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: editQuestion, answer: editAnswer }),
@@ -127,7 +138,7 @@ const App: React.FC = () => {
   const handleRenameFolder = (e: FormEvent) => {
     e.preventDefault();
     if (!renamingFolderId) return;
-    fetch(`/api/folders/${renamingFolderId}`, {
+    authfetch(`/api/folders/${renamingFolderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newFolderName }),
@@ -143,7 +154,7 @@ const App: React.FC = () => {
   // Delete a flashcard
   const handleDelete = (id: string) => {
     increaseIndex(cardindex);
-    fetch(`/api/flashcards/${id}`, { method: "DELETE" }).then(() =>
+    authfetch(`/api/flashcards/${id}`, { method: "DELETE" }).then(() =>
       setFlashcards(flashcards.filter((card) => card._id !== id))
     );
   };
@@ -151,7 +162,7 @@ const App: React.FC = () => {
   // Delete a folder
   const handleDeleteFolder = (id: string) => {
     if (!window.confirm("Are you sure? This will delete the folder and all its flashcards.")) return;
-    fetch(`/api/folders/${id}`, { method: "DELETE" })
+    authfetch(`/api/folders/${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then(() => {
         setFolders(folders.filter((f) => f._id !== id));
@@ -203,7 +214,7 @@ const App: React.FC = () => {
                                     appearance-none"
               >
                 <option value="">-- Select --</option>
-                {folders.map((folder) => (
+                {Array.isArray(folders) && folders.map((folder) => (
                   <option key={folder._id} value={folder._id}>
                     {folder.name}
                   </option>

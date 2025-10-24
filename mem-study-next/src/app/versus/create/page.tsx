@@ -3,17 +3,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSocket } from "@/lib/socket";
 import type { RoomState } from "@/types/versus";
+import {authfetch} from "@/lib/authfetch";
 
 export default function CreateRoomPage() {
   const [folders, setFolders] = useState<{ _id: string; name: string }[]>([]);
   const [folderId, setFolderId] = useState("");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("a");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    fetch(`/api/folders`)
+    authfetch(`/api/folders`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
       .then((data) => setFolders(Array.isArray(data) ? data : []))
       .catch((e) => setError(`Failed to load folders: ${e.message || e}`));
@@ -66,15 +67,6 @@ export default function CreateRoomPage() {
         </div>
       )}
 
-      <div className="space-y-3">
-        <label className="block text-sm">Your name</label>
-        <input
-          className="border rounded p-2 w-full"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="e.g. Alex"
-        />
-      </div>
 
       <div className="space-y-3">
         <label className="block text-sm">Folder</label>

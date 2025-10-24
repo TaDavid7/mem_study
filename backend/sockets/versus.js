@@ -1,5 +1,6 @@
 // backend/sockets/versus.js
 const Flashcard = require("../models/Flashcard");
+const Folder = require("../models/Folder");
 
 function createCode() {
   const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // skip confusing chars if desired
@@ -40,14 +41,28 @@ function serialize(room) {
   };
 }
 
+function broadcastState(io, room) {
+  const q = room.deck[room.currentIndex];
+  io.to(room.code).emit("roomState", {
+    ...serialize(room),
+    currentQuestion: q ? { id: q.id, question: q.question } : null,
+  });
+}
+
 module.exports = function attachVersus(io) {
   io.on("connection", (socket) => {
     socket.on("createRoom", async ({ folderId, username }, check) => {
       try{
+        
+        if (!socket.data?.userId) throw new Error("Unauthorized");
+        if (!folderId) throw new Error("folderId required");
+        const folder = await Folder.findOne({ _id: folderId, user: socket.data.userId }).lean();
+        if (!folder) throw new Error("Folder not found or unauthorized");
         const code = createCode();
         const room = {
           code,
           hostId: socket.id,
+          hostUserId: socket.data.userId,
           folderId: folderId || null,
           started: false,
           currentIndex: 0,
@@ -59,12 +74,13 @@ module.exports = function attachVersus(io) {
         socket.join(code);
         room.players.set(socket.id, {
           socketId: socket.id,
-          username: username || "Host",
+          username: (username && String(username).trim()) || "Host",
           score: 0,
           lastScoredIndex: -1,
+          userId: socket.data.userId,
         });
 
-        io.to(code).emit("roomState", serialize(room));
+        broadcastState(io, room);
 
         check?.({ok: true, code});
 
@@ -82,15 +98,21 @@ module.exports = function attachVersus(io) {
         return;
       }
       socket.join(code);
+
+      if (room.hostUserId && socket.data?.userId &&
+          String(socket.data.userId) === String(room.hostUserId)) {
+            room.hostId = socket.id;
+      }
       if (username) {
         room.players.set(socket.id, {
           socketId: socket.id,
-          username,
+          username: String(username).trim() || "Player",
           score: 0,
           lastScoredIndex: -1,
+          userId: socket.data?.userId,
         });
       }
-      io.to(code).emit("roomState", serialize(room));
+      broadcastState(io, room);
     });
 
     // Host starts the game; lock a deck order and broadcast index 0
@@ -98,19 +120,39 @@ module.exports = function attachVersus(io) {
       code = String(code || "").toUpperCase();
       const room = rooms.get(code);
       if (!room) return;
-      if (room.hostId !== socket.id) return; // host only
+      if (room.hostId !== socket.id) return;
       if (room.started) return;
 
-      const cards = await Flashcard
-        .find({ folder: room.folderId })
-        .select("_id answer") // question not needed server-side for checks
-        .lean();
+      try {
+        const hostPlayer = room.players.get(room.hostId);
+        if (!hostPlayer) {
+          socket.emit("error", { message: "Host not found" });
+          return;
+        }
 
-      room.deck = cards.map((c) => ({ id: String(c._id), answerNorm: normalize(c.answer) }));
-      room.currentIndex = 0;
-      room.started = true;
-      io.to(code).emit("roomState", serialize(room));
+        //Fetch cards from the host's folder
+        const cards = await Flashcard
+          .find({ folder: room.folderId, user: hostPlayer.userId }) 
+          .select("_id question answer")
+          .lean();
+
+        room.deck = cards.map((c) => ({
+          id: String(c._id),
+          question: c.question,
+          answer: c.answer,
+          answerNorm: normalize(c.answer),
+        }));
+
+        room.currentIndex = 0;
+        room.started = true;
+
+        broadcastState(io, room);
+      } catch (err) {
+        console.error("startGame error:", err.message);
+        socket.emit("error", { message: "Server error during startGame" });
+      }
     });
+
 
     // Client sends a guess; server validates and, if correct, awards a point once per question
     socket.on("submitGuess", ({ code, guess }) => {
@@ -133,7 +175,7 @@ module.exports = function attachVersus(io) {
           player.lastScoredIndex = room.currentIndex;
         }
         io.to(socket.id).emit("guessResult", { correct: true });
-        io.to(code).emit("roomState", serialize(room));
+        broadcastState(io, room);
         const isLast = room.currentIndex >= room.deck.length - 1;
         if (isLast) {
           // prevent any further client-driven advance from racing
@@ -151,7 +193,7 @@ module.exports = function attachVersus(io) {
       if (!room || !room.started) return;
       if (room.currentIndex < Math.max(0, room.deck.length - 1)) {
         room.currentIndex += 1;
-        io.to(code).emit("roomState", serialize(room));
+        broadcastState(io, room);
       }
       else{
         io.to(code).emit("results", serialize(room));
@@ -166,7 +208,7 @@ module.exports = function attachVersus(io) {
       if (room.hostId !== socket.id) return;
       if (room.currentIndex < Math.max(0, room.deck.length - 1)) {
         room.currentIndex += 1;
-        io.to(code).emit("roomState", serialize(room));
+        broadcastState(io, room);
       }
       else{
         io.to(code).emit("results", serialize(room));
@@ -181,6 +223,11 @@ module.exports = function attachVersus(io) {
       if(socket.id !== room.hostId) return;
 
       io.to(code).emit("revealAnswer", {index: room.currentIndex});
+      const cur = room.deck[room.currentIndex];
+      io.to(code).emit("revealAnswer", {
+        index: room.currentIndex,
+        answer: cur?.answer ?? "",
+      });
     })
 
     // Optional for special typecasting
@@ -193,11 +240,21 @@ module.exports = function attachVersus(io) {
       if (p.lastScoredIndex !== room.currentIndex) {
         p.score += Number(delta) || 1;
         p.lastScoredIndex = room.currentIndex;
-        io.to(code).emit("roomState", serialize(room));
+        broadcastState(io, room);
       }
     });
 
-    // Clean up on disconnect; transfer host or delete empty room
+    socket.on("exitGame", ({ code }) => {
+      code = String(code || "").toUpperCase();
+      const room = rooms.get(code);
+      if (!room || room.hostId !== socket.id) return;
+
+      rooms.delete(code);
+      io.to(code).emit("roomClosed");
+      io.socketsLeave(code); // disconnect all from room
+    });
+
+
     socket.on("disconnect", () => {
       for (const room of rooms.values()) {
         if (!room.players.has(socket.id)) continue;
@@ -207,7 +264,7 @@ module.exports = function attachVersus(io) {
           const next = room.players.values().next().value;
           if (next) room.hostId = next.socketId; else { rooms.delete(room.code); continue; }
         }
-        io.to(room.code).emit("roomState", serialize(room));
+        broadcastState(io, room);
       }
     });
   });

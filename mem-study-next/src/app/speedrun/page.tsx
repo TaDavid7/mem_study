@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Speedrun, {FlashcardType } from "@/components/speedrun"
+import Speedrun, {FlashcardType} from "@/components/speedrun"
+import {authfetch} from "@/lib/authfetch";
 
 
 type Card = {
@@ -26,12 +27,32 @@ export default function QuizPage() {
   const [gameReady, setGameReady] = useState<boolean>(false);
 
 
-  //load folders
-  useEffect( () => {
-      fetch(`/api/folders`)
-        .then(res => res.json())
-        .then((folders: Folder[]) => setFolders(folders));
-    }, []);
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.warn("No token, redirecting...");
+    router.push("/account");
+    return;
+  }
+
+  authfetch("/api/folders")
+    .then(async (res) => {
+      const text = await res.text();
+      console.log("🔍 Raw /api/folders response text:", text);
+
+      try {
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) {
+          console.error("Invalid folders response:", data);
+          return;
+        }
+        setFolders(data);
+      } catch (err) {
+        console.error("Failed to parse folders response as JSON", err);
+      }
+    });
+}, []);
+  
   
   //check if there are folders
   useEffect(() => {
@@ -41,7 +62,7 @@ export default function QuizPage() {
       return;
     }
     setLoading(true);
-    fetch(`/api/flashcards?folderId=${selectedFolder}`)
+    authfetch(`/api/flashcards?folderId=${selectedFolder}`)
       .then(res => res.json())
       .then((cards: FlashcardType[]) => {
         setFlashcards(cards);
@@ -51,8 +72,10 @@ export default function QuizPage() {
 
   const exitingQuizGame = () => {
     setSelectedFolder("");
-    router.push("/home")
+    router.push("/home");
   }
+
+  const isDisabled = !selectedFolder || !time || selectedFolder.length>=5;
 
   if (loading) {
     return <div className="p-6">Loading quiz...</div>;
@@ -76,7 +99,7 @@ export default function QuizPage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                 <div className="flex items-center gap-3">
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Select Folder </label>
+                    <label className="text-sm font-medium text-slate-700">Select Folder ({'>'} 4 cards) </label>
                     <>
                       <select
                         value={selectedFolder}
@@ -90,7 +113,7 @@ export default function QuizPage() {
                                     appearance-none"
                       >
                       <option value="">-- Select --</option>
-                      {folders.map(folder => (
+                      {Array.isArray(folders) && folders.map(folder => (
                         <option key={folder._id} value={folder._id}>{folder.name}</option>
                       ))}
                       </select> 
@@ -117,7 +140,7 @@ export default function QuizPage() {
               <div>
                 <button
                   className = "bg-blue-400 rounded-2xl text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" 
-                  disabled = {!selectedFolder || !time}
+                  disabled = {isDisabled}
                   onClick={() => {setGameReady(true)}} style={{ marginTop: "1rem" }}> Start
                 </button> &nbsp; &nbsp;
 

@@ -6,7 +6,7 @@ import type { RoomState } from "@/types/versus";
 
 export default function JoinRoomPage() {
   const [code, setCode] = useState("");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("a");
   const router = useRouter();
 
   function onJoin() {
@@ -38,14 +38,7 @@ export default function JoinRoomPage() {
           onChange={(e) => setCode(e.target.value)}
         />
       </div>
-      <div className="space-y-3">
-        <label className="block text-sm">Your name</label>
-        <input
-          className="border rounded p-2 w-full"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-      </div>
+      
       <button onClick={onJoin} className="rounded-2xl px-4 py-2 shadow hover:shadow-md">Join room</button>
     </div>
   );

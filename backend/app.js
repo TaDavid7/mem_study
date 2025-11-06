@@ -23,6 +23,58 @@ const auth = require("./middleware/auth");
 const app = express();
 app.use(express.json());
 
+//hellpers
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+function addDays(d, days){const x = new Date(d); x.setDate(x.getDate() + days); return x;}
+
+function todayBounds(now = new Date()){
+  const start = new Date(now);
+  start.setHours(0,0,0,0);
+  const end = new Date(now);
+  end.setHours(23,59,59,999);
+  return {start, end};
+}
+
+/**
+ * Modified SM-2 transition.
+ * grade: 0=Again, 1=Hard, 2=Good, 3=Easy
+ * returns shallow update { ease, interval, reps, lapses, due, lastReviewedAt }
+ */
+function nextSchedule(card, grade, now = new Date()) {
+  let { ease = 2.5, interval = 0, reps = 0, lapses = 0 } = card;
+  if(grade === 0) ease -= 0.2;
+  else if(grade === 1) ease -= 0.15;
+  else if(grade === 3) ease += 0.15;
+  ease = clamp(ease, 1.3, 3.0);
+
+  if (grade === 0) {
+    reps = 0;
+    interval = 1;
+    lapses += 1;
+  } else if(reps === 0){
+    reps = 1;
+    interval = 1;
+  } else if(reps === 1){
+    reps = 2;
+    interval = 6;
+  } else {
+    reps += 1;
+    interval = Math.max(1, Math.round(interval * ease));
+  }
+  return {
+    ease,
+    interval,
+    reps,
+    lapses,
+    due: addDays(now, interval),
+    lastReviewedAt: now,
+  };
+}
+
+const MAX_REVIEW = 60;
+const MAX_NEW = 20;
+
+
 // Build allowed origins list from env
 // kojo
 const allowed = (process.env.CORS_ORIGIN || "")
@@ -113,6 +165,72 @@ app.get("/api/folders", auth, async (req, res) => {
   try {
     const folders = await Folder.find({user: req.user._id}).sort({ name: 1 }).lean();
     res.json(folders);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/daily", auth, async (req, res) => {
+  try {
+    const scheduled = await Folder.find({ user: req.user._id, schedule: true })
+      .select("_id name").sort({ name: 1 }).lean();
+    const folderIds = scheduled.map(f => f._id);
+    const { end: endOfToday } = todayBounds();
+    const baseMatch = { user: req.user._id };
+    if (folderIds.length) baseMatch.folder = { $in: folderIds };
+
+    const review = await Flashcard.find({
+      ...baseMatch,
+      due: { $lte: endOfToday },
+      reps: { $gte: 1 }, 
+    })
+      .select("_id question answer folder ease interval reps lapses due")
+      .sort({ due: 1, _id: 1 })
+      .limit(MAX_REVIEW)
+      .lean();
+
+    // New cards (reps == 0)
+    const news = await Flashcard.find({
+      ...baseMatch,
+      reps: 0,
+    })
+      .select("_id question answer folder ease interval reps lapses due")
+      .limit(MAX_NEW)
+      .lean();
+    res.json({review, news});
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/review", auth, async (req, res) => {
+  try {
+    const { cardId, grade } = req.body || {};
+    if (!cardId || ![0,1,2,3].includes(grade)) {
+      return res.status(400).json({ error: "cardId and grade (0..3) required" });
+    }
+
+    // fetch minimal fields needed for scheduling
+    const card = await Flashcard.findOne(
+      { _id: cardId, user: req.user._id },
+      "ease interval reps lapses due"
+    );
+    if (!card) return res.status(404).json({ error: "not found" });
+
+    const updates = nextSchedule(card, grade, new Date());
+    Object.assign(card, updates);
+    await card.save();
+
+    // return lightweight payload
+    res.json({
+      _id: card._id,
+      ease: card.ease,
+      interval: card.interval,
+      reps: card.reps,
+      lapses: card.lapses,
+      due: card.due,
+      lastReviewedAt: card.lastReviewedAt
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -260,19 +378,28 @@ app.post("/api/login", async(req, res) => {
  */
 app.patch("/api/folders/:id", auth, async (req, res) => {
   try {
-    const name = String(req.body?.name || "").trim();
-    if (!name) return res.status(400).json({ error: "name is required" });
-    const updated = await Folder.findByIdAndUpdate(
-      {_id: req.params.id, user: req.user._id}, //finds by id
-      { name }, //updates name {name: name}
-      { new: true }   //returns new folder instead of old one
+    const { name, schedule } = req.body || {};
+    const update = {};
+
+    if (typeof name === "string" && name.trim() !== "") update.name = name.trim();
+    if ("schedule" in req.body) update.schedule = !!schedule;
+
+    if (Object.keys(update).length === 0)
+      return res.status(400).json({ error: "No valid fields to update" });
+
+    const updated = await Folder.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      update,
+      { new: true }
     );
+
     if (!updated) return res.status(404).json({ error: "not found" });
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 /**
  * @swagger
@@ -307,14 +434,15 @@ app.patch("/api/folders/:id", auth, async (req, res) => {
 app.delete("/api/folders/:id", auth, async (req, res) => {
   try {
     const { id } = req.params;
-    await Flashcard.deleteMany({ folder: id, user: req.user._id});
-    const del = await Folder.findByIdAndDelete({_id: id, user: req.user._id});
+    await Flashcard.deleteMany({ folder: id, user: req.user._id });
+    const del = await Folder.findOneAndDelete({ _id: id, user: req.user._id });
     if (!del) return res.status(404).json({ error: "not found" });
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 /**
  * @swagger

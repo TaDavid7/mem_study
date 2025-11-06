@@ -182,7 +182,7 @@ app.get("/api/daily", auth, async (req, res) => {
     const review = await Flashcard.find({
       ...baseMatch,
       due: { $lte: endOfToday },
-      reps: { $gte: 1 }, 
+      reps: { $gte: 0 }, 
     })
       .select("_id question answer folder ease interval reps lapses due")
       .sort({ due: 1, _id: 1 })
@@ -378,28 +378,28 @@ app.post("/api/login", async(req, res) => {
  */
 app.patch("/api/folders/:id", auth, async (req, res) => {
   try {
-    const { name, schedule } = req.body || {};
+    const {name, schedule} = req.body || {};
     const update = {};
-
-    if (typeof name === "string" && name.trim() !== "") update.name = name.trim();
-    if ("schedule" in req.body) update.schedule = !!schedule;
-
-    if (Object.keys(update).length === 0)
+    if (typeof name === "string" && name.trim() !== "") {
+      update.name = name.trim();
+    }
+    if ("schedule" in req.body) {
+      update.schedule = !!req.body.schedule;
+    }
+    if (Object.keys(update).length === 0) {
       return res.status(400).json({ error: "No valid fields to update" });
-
-    const updated = await Folder.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
+    }
+    const updated = await Folder.findByIdAndUpdate(
+      {_id: req.params.id, user: req.user._id}, //finds by id
       update,
-      { new: true }
+      { new: true }   //returns new folder instead of old one
     );
-
     if (!updated) return res.status(404).json({ error: "not found" });
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
-
 
 /**
  * @swagger
@@ -434,15 +434,14 @@ app.patch("/api/folders/:id", auth, async (req, res) => {
 app.delete("/api/folders/:id", auth, async (req, res) => {
   try {
     const { id } = req.params;
-    await Flashcard.deleteMany({ folder: id, user: req.user._id });
-    const del = await Folder.findOneAndDelete({ _id: id, user: req.user._id });
+    await Flashcard.deleteMany({ folder: id, user: req.user._id});
+    const del = await Folder.findByIdAndDelete({_id: id, user: req.user._id});
     if (!del) return res.status(404).json({ error: "not found" });
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
-
 
 /**
  * @swagger

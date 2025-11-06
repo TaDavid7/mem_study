@@ -16,7 +16,7 @@ type Folder = {
   name: string;
 };
 
-const App: React.FC = () => {
+export default function Home() {
   // Flashcards
   const [flashcards, setFlashcards] = useState<Card[]>([]);
   const [question, setQuestion] = useState("");
@@ -425,4 +425,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+
